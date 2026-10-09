@@ -1,0 +1,80 @@
+{
+  "_comment": "fluent-auto 规格示例:三维弯管内水流,k-omega SST。以 _ 开头的键是注释,会被忽略。路径请用纯英文。",
+  "name": "elbow",
+
+  "fluent": {
+    "_comment": "exe 留空则自动查找 C:/Program Files/ANSYS Inc/v221/fluent/ntbin/win64/fluent.exe 或 AWP_ROOT221",
+    "exe": null,
+    "dimension": 3,
+    "double_precision": true,
+    "processes": 4,
+    "ui_mode": "hidden",
+    "timeout_min": 240
+  },
+
+  "input": {
+    "file": "D:/cfd/elbow/elbow.msh.h5"
+  },
+
+  "setup": {
+    "_comment": "网格输入时会应用这里的设置;case 输入默认不应用(apply=false),沿用 case 里已有的物理设置",
+    "viscous": "kw-sst",
+    "energy": false,
+    "_material_comment": "把默认材料 air 的物性改成 20°C 水(只改密度和黏度,名字仍叫 air)",
+    "material": {"name": "air", "density": 998.2, "viscosity": 0.001003},
+    "boundary_conditions": [
+      {"zone": "inlet", "type": "velocity-inlet", "velocity": 0.4, "turb_intensity": 5, "turb_viscosity_ratio": 10},
+      {"zone": "outlet", "type": "pressure-outlet", "gauge_pressure": 0, "turb_intensity": 5, "turb_viscosity_ratio": 10}
+    ],
+    "raw_tui": []
+  },
+
+  "surfaces": [
+    {"name": "mid-plane", "type": "plane", "axis": "z", "value": 0.0}
+  ],
+
+  "solver": {
+    "p_v_coupling": "simple",
+    "second_order": true,
+    "first_order_warmup": 100,
+    "init": "hybrid",
+    "iterations": 800,
+    "chunk": 50,
+    "max_total_iterations": 5000
+  },
+
+  "reports": [
+    {"name": "p-in", "kind": "area-weighted-avg", "surfaces": ["inlet"], "field": "pressure"},
+    {"name": "mdot-out", "kind": "mass-flow-rate", "surfaces": ["outlet"]},
+    {"name": "vmax-mid", "kind": "facet-max", "surfaces": ["mid-plane"], "field": "velocity-magnitude"}
+  ],
+
+  "convergence": {
+    "residual": 1e-4,
+    "monitor_window": 3,
+    "monitor_rel_tol": 0.005,
+    "mass_imbalance_rel": 0.002
+  },
+
+  "references": [
+    {"_comment": "压降参考值(入口平均静压,出口表压为 0),相对误差 10% 以内算通过", "report": "p-in", "expected": 120.0, "rel_tol": 0.10},
+    {"_comment": "出口质量流量的正负号取决于 Fluent 的法向约定,abs=true 时按绝对值比较", "report": "mdot-out", "range": [0.0775, 0.0795], "abs": true}
+  ],
+
+  "exports": {
+    "contours": [
+      {"name": "vel-mid", "field": "velocity-magnitude", "surfaces": ["mid-plane"], "view": "front"},
+      {"name": "p-mid", "field": "pressure", "surfaces": ["mid-plane"], "view": "front"}
+    ],
+    "data": [
+      {"name": "outlet-profile", "surfaces": ["outlet"], "fields": ["pressure", "velocity-magnitude"]}
+    ],
+    "picture": {"width": 1600, "height": 1000},
+    "animation": {"enabled": false, "contour": "vel-mid", "every_chunks": 1, "fps": 5}
+  },
+
+  "debug": {
+    "max_attempts": 6,
+    "auto_numeric_fix": true
+  }
+}
