@@ -9398,10 +9398,12 @@ function rerunQuestion() {
   window.scrollTo(0, y);
 }
 
+const HOST_THEME = document.documentElement.getAttribute("data-theme");   // 网页预览版里由外层页面设定的主题
 function applyTheme() {
   const st = Store.settings;
   const root = document.documentElement;
   if (st.theme === "light" || st.theme === "dark") root.setAttribute("data-theme", st.theme);
+  else if (HOST_THEME) root.setAttribute("data-theme", HOST_THEME);
   else root.removeAttribute("data-theme");
   root.setAttribute("data-font", st.font || "m");
 }
