@@ -1,0 +1,4 @@
+node_modules/
+dist/figs/
+*.log
+.DS_Store
