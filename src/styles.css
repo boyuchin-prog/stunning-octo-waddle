@@ -432,6 +432,8 @@ textarea { resize: vertical; line-height: 1.6; }
 .figsvg .lb .n { font-weight: 600; }
 .figsvg .lb .nm { display: none; }
 .fig.names .figsvg .lb .nm { display: inline; }
+.figsvg .onlyname { display: none; }
+.fig.names .figsvg .onlyname { display: inline; }
 .figsvg .tx { fill: var(--f-text); font-size: 13px; }
 .figsvg .tx.sm, .figsvg .tk { fill: var(--f-muted); font-size: 10.5px; }
 .figsvg .tx.b { font-weight: 650; }
