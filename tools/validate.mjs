@@ -86,7 +86,9 @@ for (const f of BANK.figList) {
   if (f.ch && !BANK.chMap[f.ch]) errs.push(`图 ${f.id} 的章节无效`);
   if (f.labels) {
     const names = f.labels.map(l => l.name);
-    if (new Set(names).size !== names.length) errs.push(`图 ${f.id} 有重复的结构名称`);
+    // 结构图的名称应唯一；不出识图题的图或自定义问法的图（如发育阶段）允许同名
+    if (new Set(names).size !== names.length && f.drill !== false && !f.dq) errs.push(`图 ${f.id} 有重复的结构名称`);
+    if (f.drill !== false && new Set(names).size < 4) warns.push(`图 ${f.id} 不同名称少于 4 个，不会生成识图题`);
     const ns = f.labels.map(l => String(l.n));
     if (new Set(ns).size !== ns.length) errs.push(`图 ${f.id} 有重复的序号`);
   }

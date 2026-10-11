@@ -885,7 +885,7 @@ const BANK = {
         const optsA = [L.name].concat(others.slice(0, 12).map(x => x.name));
         const qa = Object.assign({}, base, {
           id: `F:${f.id}:${L.n}:a`, t: "s",
-          q: `识图：图中${circ(L.n)}所示的结构名称是`,
+          q: "识图：" + (f.dq || "图中{n}所示的结构名称是").replace("{n}", circ(L.n)),
           o: uniq(optsA), a: 0, pool: true,
           e: `${circ(L.n)}是${L.name}${L.fn ? "，" + L.fn : ""}。`
         });
@@ -894,10 +894,10 @@ const BANK = {
           const withFn = others.filter(x => x.fn !== L.fn);
           const qb = Object.assign({}, base, {
             id: `F:${f.id}:${L.n}:b`, t: "s", d: 2,
-            q: `识图：图中具有“${L.fn}”作用的结构是`,
+            q: `识图：图中符合“${L.fn}”这一描述的是`,
             o: [`${circ(L.n)} ${L.name}`].concat(withFn.map(x => `${circ(x.n)} ${x.name}`)),
             a: 0, pool: true,
-            e: `${L.fn}的是${circ(L.n)}${L.name}。`
+            e: `${circ(L.n)}${L.name}：${L.fn}。`
           });
           this._addDrill(qb);
         }
@@ -993,6 +993,19 @@ const FK = {
   box(x, y, w, h, s, cls) {
     return `<g class="bx ${cls || ""}"><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="6"/>` +
       `<text class="bt" x="${x + w / 2}" y="${y + h / 2 + 4.5}" text-anchor="middle">${s}</text></g>`;
+  },
+  /* 以中心点定位的文字方框：r = {x, y, w, h} */
+  cbox(r, s, cls) {
+    return FK.box(r.x - r.w / 2, r.y - r.h / 2, r.w, r.h, s, cls);
+  },
+  /* 两个方框之间的箭头，起止点自动落在方框边缘 */
+  link(a, b, cls, gap) {
+    gap = gap == null ? 3 : gap;
+    const dx = b.x - a.x, dy = b.y - a.y, L = Math.hypot(dx, dy) || 1;
+    const ux = dx / L, uy = dy / L;
+    const t = r => Math.min(r.w / 2 / (Math.abs(ux) || 1e-9), r.h / 2 / (Math.abs(uy) || 1e-9)) + gap;
+    const ta = t(a), tb = t(b);
+    return FK.arr(+(a.x + ux * ta).toFixed(1), +(a.y + uy * ta).toFixed(1), +(b.x - ux * tb).toFixed(1), +(b.y - uy * tb).toFixed(1), cls);
   },
   /* 坐标轴（曲线图用）：返回轴线与刻度；fx/fy 为数据到坐标的映射 */
   axes(o) {
@@ -1201,6 +1214,639 @@ const EXAM_SPEC = {
       { n: 7, name: "肾静脉（方向）" },
       { n: 8, name: "集合管" }
     ]
+  });
+})();
+
+/* ---- data/figures/f11_neuro.js ---- */
+/* 八上第四单元第六章：眼、耳、神经元、反射弧、脑、关节、屈肘伸肘、内分泌腺、近视 */
+(function () {
+  const { co, txt, arr, lbl } = FK;
+
+  /* ---------- 眼球 ---------- */
+  let e = "";
+  const C = [250, 150];
+  const arc = (r, a0, a1) => {
+    const p = a => [C[0] + r * Math.cos(a * Math.PI / 180), C[1] + r * Math.sin(a * Math.PI / 180)];
+    const [x0, y0] = p(a0), [x1, y1] = p(a1);
+    return `M${x0.toFixed(1)} ${y0.toFixed(1)} A${r} ${r} 0 1 1 ${x1.toFixed(1)} ${y1.toFixed(1)}`;
+  };
+  e += `<path class="k c-wht" d="${arc(112, 210, 150)} Z"/>`;                                   // 巩膜
+  e += `<path class="st" style="stroke:var(--f-brn);stroke-width:7" d="${arc(104, 214, 146)}"/>`; // 脉络膜
+  e += `<path class="st" style="stroke:var(--f-pink);stroke-width:7" d="${arc(97, 218, 142)}"/>`; // 视网膜
+  e += `<path class="k c-wat" d="M154 94 C112 118 112 182 154 206 C150 180 150 120 154 94 Z"/>`;  // 角膜
+  e += `<path class="st" style="stroke:var(--f-brn);stroke-width:7" d="M160 102 L162 134 M160 198 L162 166"/>`; // 虹膜
+  e += `<path class="k c-dark" d="M166 98 l10 8 l-6 4 z M166 202 l10 -8 l-6 -4 z"/>`;            // 睫状体
+  e += `<ellipse class="k c-wat" cx="182" cy="150" rx="13" ry="38"/>`;                             // 晶状体
+  e += `<path class="k c-yel" d="M354 140 L452 154 L452 176 L354 166 Z"/>`;                        // 视神经
+  e += co(1, 124, 150, 60, 150, "角膜", "l");
+  e += co(2, 161, 116, 80, 74, "虹膜", "l");
+  e += co(3, 162, 150, 80, 226, "瞳孔", "l").replace(/<circle[^>]*>/, `<circle class="dot" cx="162" cy="150" r="1.7"/>`);
+  e += co(4, 186, 160, 150, 270, "晶状体", "b");
+  e += co(5, 172, 102, 160, 30, "睫状体", "t");
+  e += co(6, 270, 150, 470, 112, "玻璃体", "r");
+  e += co(7, 330, 210, 470, 230, "视网膜", "r");
+  e += co(8, 316, 78, 400, 40, "脉络膜", "r");
+  e += co(9, 290, 46, 300, 18, "巩膜", "t");
+  e += co(10, 430, 160, 470, 196, "视神经", "r");
+  BANK.fig("eye", {
+    title: "眼球的基本结构示意图（水平切面）", vb: "-10 0 560 290", ch: "u4c6", kp: "眼与视觉",
+    body: e,
+    labels: [
+      { n: 1, name: "角膜", fn: "无色透明，光线由此进入眼内" },
+      { n: 2, name: "虹膜", fn: "含色素，决定“黑眼球”的颜色" },
+      { n: 3, name: "瞳孔", fn: "光线的通道，能调节进入眼内的光量" },
+      { n: 4, name: "晶状体", fn: "对光线起主要折射作用，曲度可以调节" },
+      { n: 5, name: "睫状体", fn: "内有平滑肌，能调节晶状体的曲度" },
+      { n: 6, name: "玻璃体", fn: "透明的胶状物质，支撑眼球" },
+      { n: 7, name: "视网膜", fn: "含有对光线敏感的细胞，能形成物像" },
+      { n: 8, name: "脉络膜", fn: "含丰富的血管和色素，营养眼球并形成“暗室”" },
+      { n: 9, name: "巩膜", fn: "白色、坚韧，保护眼球内部结构" },
+      { n: 10, name: "视神经", fn: "把神经冲动传到大脑皮层的视觉中枢" }
+    ]
+  });
+
+  /* ---------- 耳 ---------- */
+  let r = "";
+  r += `<path class="k c-bone" d="M70 40 C30 40 18 90 30 130 C38 160 30 190 46 214 C58 232 84 236 94 214 C100 198 90 186 96 172 L98 128 C104 100 104 50 70 40 Z"/>`;
+  r += `<path class="k c-pink" d="M96 136 L200 140 L200 162 L96 166 Z"/>`;                              // 外耳道
+  r += `<ellipse class="k c-wht" cx="204" cy="151" rx="5" ry="26"/>`;                                  // 鼓膜
+  r += `<path class="k c-cyto" d="M210 118 C244 112 262 126 262 152 C262 178 244 190 210 184 Z"/>`;  // 鼓室
+  r += `<path class="k c-bone" d="M210 140 l14 -4 l6 10 l-12 6 z M226 138 l14 4 l-2 12 l-12 -4 z M240 146 l16 -2 l0 12 l-16 -2 z"/>`; // 听小骨
+  r += `<path class="k c-cyto" d="M240 182 C262 204 286 236 318 270 L306 280 C276 248 252 216 232 190 Z"/>`;  // 咽鼓管
+  // 半规管
+  r += `<path class="st" style="stroke:var(--f-wat);stroke-width:9" d="M280 132 C266 80 314 66 324 112 M292 130 C300 90 350 92 336 132 M300 140 C330 110 370 124 344 150"/>`;
+  r += `<path class="st" d="M280 132 C266 80 314 66 324 112 M292 130 C300 90 350 92 336 132 M300 140 C330 110 370 124 344 150" style="stroke-width:.8"/>`;
+  r += `<ellipse class="k c-wat" cx="296" cy="146" rx="22" ry="16"/>`;                                   // 前庭
+  // 耳蜗（螺旋）
+  let sp = "M318 160";
+  for (let t = 0; t <= 4 * Math.PI; t += 0.25) { const rr = 34 - t * 2.3; sp += ` L${(350 + rr * Math.cos(t)).toFixed(1)} ${(176 + rr * Math.sin(t) * 0.85).toFixed(1)}`; }
+  r += `<path class="st" style="stroke:var(--f-wat);stroke-width:10" d="${sp}"/><path class="st" style="stroke-width:.8" d="${sp}"/>`;
+  r += `<path class="k c-yel" d="M352 166 L460 140 L462 156 L354 182 Z"/>`;                             // 听神经
+  r += co(1, 40, 90, 20, 60, "耳廓", "l");
+  r += co(2, 150, 152, 150, 220, "外耳道", "b");
+  r += co(3, 205, 130, 190, 80, "鼓膜", "t");
+  r += co(4, 232, 144, 240, 60, "听小骨", "t");
+  r += co(5, 300, 96, 320, 30, "半规管", "t");
+  r += co(6, 300, 150, 470, 104, "前庭", "r");
+  r += co(7, 362, 196, 470, 216, "耳蜗", "r");
+  r += co(8, 440, 148, 470, 150, "听神经", "r");
+  r += co(9, 290, 254, 250, 290, "咽鼓管", "l");
+  BANK.fig("ear", {
+    title: "耳的基本结构示意图", vb: "-30 10 570 300", ch: "u4c6", kp: "耳与听觉",
+    body: r,
+    labels: [
+      { n: 1, name: "耳廓", fn: "收集声波" },
+      { n: 2, name: "外耳道", fn: "把声波传到鼓膜" },
+      { n: 3, name: "鼓膜", fn: "接受声波刺激，产生振动" },
+      { n: 4, name: "听小骨", fn: "把鼓膜的振动传到内耳" },
+      { n: 5, name: "半规管", fn: "感受头部位置变动，与身体平衡（晕车）有关" },
+      { n: 6, name: "前庭" },
+      { n: 7, name: "耳蜗", fn: "内有对声波敏感的感觉细胞（听觉感受器）" },
+      { n: 8, name: "听神经", fn: "把神经冲动传到大脑皮层的听觉中枢" },
+      { n: 9, name: "咽鼓管", fn: "连通咽与鼓室，维持鼓膜内外气压平衡" }
+    ]
+  });
+
+  /* ---------- 神经元 ---------- */
+  let n = "";
+  n += `<path class="k c-pur" d="M80 70 L100 64 L118 76 L126 98 L116 118 L94 126 L74 116 L66 94 Z"/>`;
+  n += `<circle class="k c-nuc" cx="96" cy="96" r="11"/>`;
+  [[80, 70, 52, 34, 34, 22, 60, 16], [66, 94, 34, 88, 16, 76, 20, 104], [74, 116, 50, 142, 30, 150, 44, 164], [100, 64, 108, 34, 96, 18, 124, 20], [116, 118, 124, 150, 112, 168, 140, 160]].forEach(([x0, y0, x1, y1, x2, y2, x3, y3]) => {
+    n += `<path class="st" d="M${x0} ${y0} L${x1} ${y1} L${x2} ${y2} M${x1} ${y1} L${x3} ${y3}"/>`;
+  });
+  n += `<path class="st thick" d="M126 98 H420"/>`;
+  for (let x = 150; x < 400; x += 44) n += `<rect class="k c-yel" x="${x}" y="90" width="36" height="16" rx="7"/>`;
+  n += `<path class="st" d="M420 98 L450 76 M420 98 L456 98 M420 98 L450 120 M450 76 l12 -6 M450 120 l12 6"/>`;
+  n += co(1, 50, 142, 30, 180, "树突", "b");
+  n += co(2, 88, 116, 92, 180, "细胞体", "b");
+  n += co(3, 96, 96, 170, 40, "细胞核", "r");
+  n += co(4, 260, 98, 260, 150, "轴突", "b");
+  n += co(5, 456, 98, 470, 140, "神经末梢", "b");
+  BANK.fig("neuron", {
+    title: "神经元结构示意图", vb: "0 0 520 200", ch: "u4c6", kp: "神经系统的组成",
+    body: n,
+    labels: [
+      { n: 1, name: "树突" }, { n: 2, name: "细胞体" }, { n: 3, name: "细胞核" },
+      { n: 4, name: "轴突" }, { n: 5, name: "神经末梢" }
+    ]
+  });
+
+  /* ---------- 反射弧（缩手反射示意） ---------- */
+  let a = "";
+  // 脊髓横切面
+  a += `<ellipse class="k c-wht" cx="390" cy="150" rx="74" ry="58"/>`;
+  a += `<path class="k c-gry" d="M352 116 C366 122 376 132 384 140 C392 132 404 122 418 116 C424 128 414 142 404 150 C414 158 424 172 420 186 C406 180 394 168 386 160 C378 168 366 180 352 186 C348 172 358 158 368 150 C358 142 346 128 352 116 Z"/>`;
+  // 皮肤与感受器
+  a += `<rect class="k c-pink" x="20" y="60" width="90" height="40" rx="10"/>`;
+  a += `<path class="st" d="M60 80 l-8 -8 M60 80 l0 -12 M60 80 l8 -8"/>`;
+  // 传入神经（带神经节）
+  a += `<path class="st thick" d="M60 80 C120 80 200 76 300 96"/>`;
+  a += `<ellipse class="k c-pur" cx="304" cy="98" rx="14" ry="10"/>`;
+  a += `<path class="st thick" d="M318 100 C340 104 356 114 372 128"/>`;
+  // 中间神经元
+  a += `<path class="st thick" d="M372 128 C380 140 384 150 392 162"/>`;
+  // 传出神经
+  a += `<circle class="k c-pur" cx="396" cy="168" r="7"/>`;
+  a += `<path class="st thick" d="M390 172 C350 196 260 210 160 220 C140 222 120 226 104 232"/>`;
+  // 效应器（肌肉）
+  a += `<ellipse class="k c-mus" cx="80" cy="236" rx="40" ry="18"/>`;
+  a += arr(150, 70, 200, 70, "ar thin", 6) + arr(220, 222, 180, 226, "ar thin", 6);
+  a += co(1, 60, 76, 40, 30, "感受器", "t");
+  a += co(2, 200, 84, 210, 40, "传入神经", "t");
+  a += co(3, 384, 150, 480, 110, "神经中枢", "r");
+  a += co(4, 250, 210, 250, 262, "传出神经", "b");
+  a += co(5, 80, 250, 80, 280, "效应器", "b");
+  a += co(6, 414, 180, 480, 190, "灰质", "r");
+  a += co(7, 450, 130, 480, 150, "白质", "r");
+  BANK.fig("reflexarc", {
+    title: "反射弧结构示意图（箭头表示神经冲动传导方向）", vb: "0 10 560 298", ch: "u4c6", kp: "反射与反射弧",
+    body: a,
+    labels: [
+      { n: 1, name: "感受器", fn: "接受刺激并产生神经冲动" },
+      { n: 2, name: "传入神经", fn: "把神经冲动传到神经中枢" },
+      { n: 3, name: "神经中枢", fn: "对传入的信息进行分析和综合" },
+      { n: 4, name: "传出神经", fn: "把神经冲动传到效应器" },
+      { n: 5, name: "效应器", fn: "接受神经冲动并作出反应" },
+      { n: 6, name: "灰质", fn: "神经元细胞体集中的部位" },
+      { n: 7, name: "白质", fn: "神经纤维集中，起传导作用" }
+    ]
+  });
+
+  /* ---------- 脑 ---------- */
+  let b = "";
+  b += `<path class="k c-pink" d="M60 150 C40 90 90 30 180 28 C270 26 330 70 330 130 C330 160 310 176 280 180 C250 184 220 176 200 186 C170 200 120 196 90 180 C74 172 64 164 60 150 Z"/>`;
+  [["M100 80 q30 -20 60 0"], ["M180 60 q30 20 60 0"], ["M120 130 q30 -16 60 0"], ["M220 120 q30 -20 60 0"], ["M260 80 q20 18 40 4"], ["M90 110 q14 10 28 2"]].forEach(([d]) => b += `<path class="st thin" d="${d}"/>`);
+  b += `<path class="k c-wall" d="M226 186 C250 178 300 180 316 200 C324 220 300 238 270 236 C246 234 226 220 222 204 Z"/>`;
+  for (let i = 0; i < 5; i++) b += `<path class="st thin" d="M${236 + i * 4} ${200 + i * 6} q30 -6 ${70 - i * 6} 4"/>`;
+  b += `<path class="k c-org" d="M186 176 C190 196 200 220 206 240 L190 244 C184 226 176 200 172 182 Z"/>`;
+  b += `<path class="k c-yel" d="M190 244 L206 240 L210 296 L194 296 Z"/>`;
+  b += co(1, 160, 70, 90, 20, "大脑", "l");
+  b += co(2, 290, 214, 360, 230, "小脑", "r");
+  b += co(3, 192, 210, 120, 236, "脑干", "l");
+  b += co(4, 202, 280, 260, 286, "脊髓", "r");
+  BANK.fig("brain", {
+    title: "脑的结构示意图（纵剖）", vb: "20 6 410 300", ch: "u4c6", kp: "神经系统的组成",
+    body: b,
+    labels: [
+      { n: 1, name: "大脑", fn: "表层为大脑皮层，是调节人体生命活动的最高级中枢" },
+      { n: 2, name: "小脑", fn: "使运动协调、准确，维持身体平衡" },
+      { n: 3, name: "脑干", fn: "有调节心跳、呼吸、血压等基本生命活动的中枢" },
+      { n: 4, name: "脊髓", fn: "能完成一些低级反射，并有传导功能" }
+    ]
+  });
+
+  /* ---------- 关节 ---------- */
+  let j = "";
+  j += `<path class="k c-bone" d="M130 20 H210 V120 C230 130 236 160 214 176 C196 190 144 190 126 176 C104 160 110 130 130 120 Z"/>`;   // 上骨+关节头
+  j += `<path class="st" style="stroke:var(--f-wat);stroke-width:7" d="M118 150 C124 186 216 186 222 150"/>`;   // 关节头软骨
+  j += `<path class="k c-bone" d="M100 196 C120 214 220 214 240 196 L240 290 H100 Z"/>`;   // 下骨+关节窝
+  j += `<path class="st" style="stroke:var(--f-wat);stroke-width:7" d="M104 200 C124 218 216 218 236 200"/>`;  // 关节窝软骨
+  j += `<path class="st thick" style="stroke:var(--f-mus)" d="M130 108 C96 130 82 200 100 240 M210 108 C244 130 258 200 240 240"/>`;  // 关节囊
+  j += co(1, 170, 160, 300, 120, "关节头", "r");
+  j += co(2, 210, 172, 300, 160, "关节软骨", "r");
+  j += co(3, 170, 196, 300, 196, "关节腔", "r");
+  j += co(4, 170, 224, 300, 236, "关节窝", "r");
+  j += co(5, 93, 182, 40, 182, "关节囊", "l");
+  BANK.fig("joint", {
+    title: "关节的基本结构示意图", vb: "-50 10 430 290", ch: "u4c6", kp: "运动系统",
+    body: j,
+    labels: [
+      { n: 1, name: "关节头" },
+      { n: 2, name: "关节软骨", fn: "覆盖在关节面上，减少摩擦、缓冲震动" },
+      { n: 3, name: "关节腔", fn: "内有少量滑液，使关节活动灵活" },
+      { n: 4, name: "关节窝" },
+      { n: 5, name: "关节囊", fn: "把相邻两骨牢固地联系起来，使关节牢固" }
+    ]
+  });
+
+  /* ---------- 屈肘与伸肘 ---------- */
+  let m = "";
+  const arm = (x, flex) => {
+    let s = `<rect class="k c-bone" x="${x}" y="30" width="18" height="130" rx="8"/>`;    // 肱骨
+    if (flex) {
+      // 屈肘：前臂向前上方抬起；肱二头肌（前侧）收缩变粗，肱三头肌（后侧）舒张变长
+      s += `<g transform="rotate(-120 ${x + 9} 160)"><rect class="k c-bone" x="${x + 2}" y="160" width="14" height="110" rx="7"/></g>`;
+      s += `<path class="k c-mus" d="M${x + 18} 48 C${x + 62} 72 ${x + 62} 124 ${x + 30} 142 C${x + 24} 120 ${x + 20} 80 ${x + 18} 48 Z"/>`;
+      s += `<path class="k c-mus" d="M${x} 48 C${x - 14} 80 ${x - 14} 140 ${x + 4} 170 C${x - 4} 140 ${x - 4} 80 ${x} 48 Z"/>`;
+    } else {
+      // 伸肘：前臂伸直；肱三头肌收缩变粗，肱二头肌舒张
+      s += `<rect class="k c-bone" x="${x + 2}" y="162" width="14" height="110" rx="7"/>`;
+      s += `<path class="k c-mus" d="M${x + 18} 48 C${x + 32} 80 ${x + 32} 140 ${x + 16} 180 C${x + 24} 140 ${x + 24} 80 ${x + 18} 48 Z"/>`;
+      s += `<path class="k c-mus" d="M${x} 48 C${x - 34} 78 ${x - 34} 132 ${x + 2} 166 C${x - 8} 130 ${x - 8} 80 ${x} 48 Z"/>`;
+    }
+    return s;
+  };
+  m += arm(120, true) + arm(340, false);
+  m += txt(110, 300, "甲", "tx b", "middle", 15) + txt(350, 300, "乙", "tx b", "middle", 15);
+  m += co(1, 164, 96, 214, 56, "肱二头肌", "r");
+  m += co(2, 112, 110, 40, 92, "肱三头肌", "l");
+  m += co(3, 129, 160, 200, 182, "肘关节", "r");
+  BANK.fig("elbow", {
+    title: "屈肘（甲）和伸肘（乙）时肌肉的协作示意图", vb: "-40 14 480 300", ch: "u4c6", kp: "运动系统",
+    body: m, drill: false,
+    labels: [{ n: 1, name: "肱二头肌" }, { n: 2, name: "肱三头肌" }, { n: 3, name: "肘关节" }]
+  });
+
+  /* ---------- 内分泌腺 ---------- */
+  let g = "";
+  g += `<circle class="k c-wht" cx="180" cy="56" r="40"/>`;
+  g += `<path class="k c-wht" d="M164 94 L196 94 L198 112 C250 116 262 140 262 180 L256 320 C256 340 236 350 220 350 L212 470 L148 470 L140 350 C124 350 104 340 104 320 L98 180 C98 140 110 116 162 112 Z"/>`;
+  const dot = (x, y, cls) => `<ellipse class="k ${cls || "c-org"}" cx="${x}" cy="${y}" rx="9" ry="6"/>`;
+  g += dot(180, 60, "c-pur");                      // 垂体
+  g += `<path class="k c-org" d="M166 104 q14 12 28 0 q-2 12 -14 12 q-12 0 -14 -12z"/>`;  // 甲状腺
+  g += dot(180, 150, "c-yel");                     // 胸腺
+  g += dot(152, 236) + dot(208, 236);               // 肾上腺
+  g += `<path class="k c-yel" d="M160 262 C180 256 214 256 232 250 C236 258 232 266 222 268 C200 272 180 274 160 272 Z"/>`;   // 胰腺
+  g += dot(150, 318, "c-pink") + dot(210, 318, "c-pink");   // 卵巢
+  g += co(1, 180, 60, 280, 40, "垂体", "r");
+  g += co(2, 192, 110, 280, 100, "甲状腺", "r");
+  g += co(3, 186, 150, 280, 150, "胸腺", "r");
+  g += co(4, 214, 236, 280, 220, "肾上腺", "r");
+  g += co(5, 226, 260, 280, 270, "胰腺（内有胰岛）", "r");
+  g += co(6, 216, 318, 280, 320, "卵巢", "r");
+  BANK.fig("glands", {
+    title: "人体主要内分泌腺示意图（女性）", vb: "60 6 400 480", maxw: 360, ch: "u4c6", kp: "激素调节",
+    body: g,
+    labels: [
+      { n: 1, name: "垂体", fn: "分泌生长激素等，还能调节其他内分泌腺的活动" },
+      { n: 2, name: "甲状腺", fn: "分泌甲状腺激素，促进新陈代谢和生长发育" },
+      { n: 3, name: "胸腺" },
+      { n: 4, name: "肾上腺", fn: "分泌肾上腺素，使心跳加快、血压升高" },
+      { n: 5, name: "胰腺（内有胰岛）", fn: "胰岛分泌胰岛素，调节血糖浓度" },
+      { n: 6, name: "卵巢", fn: "分泌雌性激素，产生卵细胞" }
+    ]
+  });
+
+  /* ---------- 近视成像及矫正 ---------- */
+  let y = "";
+  const eyeball = (cx) => `<circle class="k c-wht" cx="${cx}" cy="110" r="70"/><path class="st" style="stroke:var(--f-pink);stroke-width:6" d="M${cx + 30} 47 A70 70 0 0 1 ${cx + 30} 173"/>` +
+    `<ellipse class="k c-wat" cx="${cx - 52}" cy="110" rx="10" ry="30"/>`;
+  y += eyeball(160) + eyeball(420);
+  // 甲：近视，成像在视网膜前
+  [80, 100, 120, 140].forEach(yy => { y += `<line class="st thin s-red" x1="20" y1="${yy}" x2="108" y2="${yy}"/><line class="st thin s-red" x1="108" y1="${yy}" x2="186" y2="110"/><line class="st thin s-red" x1="186" y1="110" x2="214" y2="${110 + (110 - yy) * 0.35}"/>`; });
+  y += `<circle class="c-line" cx="186" cy="110" r="3"/>`;
+  // 乙：戴凹透镜矫正，成像在视网膜上
+  y += `<path class="k c-wat" d="M296 60 C304 90 304 130 296 160 L314 160 C306 130 306 90 314 60 Z"/>`;
+  [80, 100, 120, 140].forEach(yy => { const y2 = 110 + (yy - 110) * 1.25; y += `<line class="st thin s-red" x1="250" y1="${yy}" x2="305" y2="${yy}"/><line class="st thin s-red" x1="305" y1="${yy}" x2="368" y2="${y2}"/><line class="st thin s-red" x1="368" y1="${y2}" x2="488" y2="110"/>`; });
+  y += `<circle class="c-line" cx="488" cy="110" r="3"/>`;
+  y += txt(160, 200, "甲", "tx b", "middle", 15) + txt(420, 200, "乙", "tx b", "middle", 15);
+  BANK.fig("myopia", { title: "近视眼的成像（甲）及矫正（乙）示意图", vb: "10 30 510 180", ch: "u4c6", kp: "眼与视觉", body: y, drill: false });
+})();
+
+/* ---- data/figures/f12_eco.js ---- */
+/* 八上第五单元：食物网、物质循环、能量金字塔、鼠妇实验 */
+(function () {
+  const { txt, arr, parr, cbox, link, lbl } = FK;
+
+  /* ---------- 草原生态系统食物网 ---------- */
+  const N = {
+    鹰: { x: 220, y: 30, w: 46, h: 26 },
+    狐: { x: 220, y: 128, w: 46, h: 26 },
+    蛇: { x: 392, y: 98, w: 46, h: 26 },
+    兔: { x: 80, y: 192, w: 46, h: 26 },
+    鼠: { x: 360, y: 192, w: 46, h: 26 },
+    草: { x: 220, y: 272, w: 46, h: 26 }
+  };
+  let w = "";
+  Object.keys(N).forEach(k => { w += cbox(N[k], k, k === "草" ? "hl" : ""); });
+  [["草", "兔"], ["草", "鼠"], ["兔", "狐"], ["兔", "鹰"], ["鼠", "狐"], ["鼠", "鹰"], ["鼠", "蛇"], ["蛇", "鹰"]]
+    .forEach(([a, b]) => { w += link(N[a], N[b]); });
+  BANK.fig("foodweb", {
+    title: "某草原生态系统的食物网示意图", vb: "40 6 410 290", maxw: 440, ch: "u5c1", kp: "食物链和食物网",
+    body: w, drill: false
+  });
+
+  /* ---------- 生态系统中的物质循环 ---------- */
+  let c = "";
+  c += cbox({ x: 230, y: 34, w: 420, h: 32 }, "大气中的二氧化碳");
+  const 甲 = { x: 60, y: 190, w: 64, h: 32 }, 乙 = { x: 230, y: 190, w: 64, h: 32 }, 丙 = { x: 400, y: 190, w: 64, h: 32 };
+  c += cbox(甲, "甲", "hl") + cbox(乙, "乙") + cbox(丙, "丙");
+  c += arr(48, 52, 48, 172) + arr(72, 172, 72, 52) + arr(230, 172, 230, 52) + arr(400, 172, 400, 52);
+  c += arr(94, 190, 196, 190) + arr(264, 190, 366, 190);
+  c += parr([[60, 208], [60, 236], [400, 236], [400, 208]]);
+  c += lbl(1, 44, 112, "光合作用", "l") + lbl(2, 76, 112, "呼吸作用", "r") + lbl(3, 234, 112, "呼吸作用", "r") + lbl(4, 404, 112, "分解作用", "r");
+  c += txt(145, 182, "捕食", "tx sm") + txt(230, 252, "遗体、遗物", "tx sm");
+  BANK.fig("ecocycle", {
+    title: "生态系统中的物质循环示意图（甲、乙、丙代表生态系统的生物成分）", vb: "-40 10 540 254", maxw: 520, ch: "u5c1", kp: "能量流动和物质循环",
+    body: c, drill: false,
+    labels: [{ n: 1, name: "光合作用" }, { n: 2, name: "呼吸作用" }, { n: 3, name: "呼吸作用" }, { n: 4, name: "分解作用" }]
+  });
+
+  /* ---------- 能量金字塔 ---------- */
+  let p = "";
+  const lv = [["丁", 300, "c-leaf"], ["丙", 220, "c-yel"], ["乙", 140, "c-org"], ["甲", 64, "c-red"]];
+  lv.forEach(([s, wd, cls], i) => {
+    const y = 210 - i * 46;
+    p += `<rect class="k ${cls}" x="${200 - wd / 2}" y="${y}" width="${wd}" height="40" rx="3"/>`;
+    p += txt(200, y + 25, s, "tx b", "middle", 15);
+  });
+  p += arr(380, 246, 380, 70, "ar mut") + txt(392, 160, "营养级逐级升高", "tx sm", "start");
+  BANK.fig("epyramid", {
+    title: "某生态系统中四种生物所含能量的相对值（能量金字塔）", vb: "30 64 460 194", maxw: 460, ch: "u5c1", kp: "能量流动和物质循环",
+    body: p, drill: false
+  });
+
+  /* ---------- 探究光对鼠妇分布的影响 ---------- */
+  let m = "";
+  m += `<rect class="k c-soil" x="41" y="140" width="358" height="30"/>`;
+  m += `<path class="st thick nf" d="M40 60 V170 H400 V60"/>`;
+  m += `<rect class="k c-dark" x="34" y="50" width="186" height="10"/>`;          // 纸板
+  m += `<rect class="k c-wat" x="220" y="53" width="186" height="5"/>`;           // 玻璃板
+  [270, 312, 354].forEach(x => { m += arr(x + 20, 2, x, 44, "ar mut", 6); });
+  const bug = (x, y) => `<ellipse class="k c-dark" cx="${x}" cy="${y}" rx="7" ry="4"/><path class="st thin" d="M${x - 4} ${y + 3} l-2 4 M${x} ${y + 4} v4 M${x + 4} ${y + 3} l2 4"/>`;
+  [[204, 132], [220, 128], [236, 132], [212, 120], [228, 120]].forEach(([x, y]) => { m += bug(x, y); });
+  m += txt(127, 44, "纸板", "tx") + txt(412, 60, "玻璃板", "tx", "start");
+  m += txt(127, 104, "阴暗", "tx b", "middle", 15) + txt(330, 104, "明亮", "tx b", "middle", 15);
+  m += txt(110, 160, "湿土", "tx sm") + txt(340, 160, "湿土", "tx sm");
+  m += `<line class="ld" x1="220" y1="136" x2="220" y2="184"/>` + txt(220, 200, "鼠妇", "tx");
+  BANK.fig("woodlouse", {
+    title: "探究“光对鼠妇分布的影响”实验装置（侧面示意）", vb: "20 -6 450 214", maxw: 460, ch: "u5c1", kp: "生物与环境的关系",
+    body: m, drill: false
+  });
+})();
+
+/* ---- data/figures/f13_repro.js ---- */
+/* 八下第六单元第一章：鸟卵、嫁接、昆虫的发育 */
+(function () {
+  const { co, txt, arr, lbl } = FK;
+
+  /* ---------- 鸟卵的结构 ---------- */
+  let e = "";
+  const egg = "M46 130 C46 60 112 28 204 28 C300 28 362 86 362 130 C362 174 300 232 204 232 C112 232 46 200 46 130 Z";
+  const egg2 = "M54 130 C54 66 116 36 204 36 C294 36 354 90 354 130 C354 170 294 224 204 224 C116 224 54 194 54 130 Z";
+  e += `<path class="k c-bone" d="${egg}"/>`;
+  e += `<path class="k c-wht" d="${egg2}"/>`;
+  e += `<path class="k c-gry" d="M62 96 C80 112 82 150 62 166 C56 150 55 112 62 96 Z"/>`;            // 气室
+  const cord = (x0, dir) => { let d = `M${x0} 130`; for (let i = 0; i < 2; i++) d += ` q${dir * 7} -7 ${dir * 14} 0 q${dir * 7} 7 ${dir * 14} 0`; return `<path class="st" d="${d}"/>`; };
+  e += cord(154, -1) + cord(264, 1);                                                              // 系带
+  e += `<circle class="k c-yel" cx="210" cy="132" r="56"/>`;
+  e += `<ellipse class="k c-wht" cx="210" cy="80" rx="11" ry="4.5"/>`;                             // 胚盘
+  e += co(1, 300, 46, 380, 20, "卵壳", "r");
+  e += co(2, 330, 74, 380, 56, "壳膜", "r");
+  e += co(3, 64, 130, 6, 130, "气室", "l");
+  e += co(4, 296, 190, 380, 208, "卵白", "r");
+  e += co(5, 300, 130, 380, 160, "系带", "r");
+  e += co(6, 222, 150, 260, 256, "卵黄", "b");
+  e += co(7, 210, 80, 150, 6, "胚盘", "l");
+  e += co(8, 170, 171, 140, 256, "卵黄膜", "b");
+  BANK.fig("birdegg", {
+    title: "鸟卵的结构示意图", vb: "-50 -6 500 284", maxw: 480, ch: "u6c1", kp: "鸟的生殖和发育",
+    body: e,
+    labels: [
+      { n: 1, name: "卵壳", fn: "起保护作用，上有许多气孔，能进行气体交换" },
+      { n: 2, name: "壳膜", fn: "起保护作用" },
+      { n: 3, name: "气室", fn: "储存空气，为胚胎发育提供氧气" },
+      { n: 4, name: "卵白", fn: "为胚胎发育提供营养物质和水分" },
+      { n: 5, name: "系带", fn: "固定卵黄，使其悬于卵的中央" },
+      { n: 6, name: "卵黄", fn: "为胚胎发育提供主要的营养物质" },
+      { n: 7, name: "胚盘", fn: "内有细胞核，是胚胎发育的部位" },
+      { n: 8, name: "卵黄膜", fn: "包在卵黄外面，起保护作用" }
+    ]
+  });
+
+  /* ---------- 嫁接 ---------- */
+  let g = "";
+  // 甲：枝接
+  g += `<path class="k c-brn" d="M70 250 V140 L84 140 L90 160 L96 140 L110 140 V250 Z"/>`;          // 砧木（顶端切口）
+  g += `<path class="k c-leaf" d="M84 60 H96 V150 L90 168 L84 150 Z"/>`;                              // 接穗
+  [[96, 80, 1], [84, 106, -1]].forEach(([x, y, s]) => { g += `<path class="k c-leaf" d="M${x} ${y} q${s * 14} -8 ${s * 18} -22 q${s * -14} 4 ${s * -18} 14 Z"/>`; });
+  for (let y = 136; y <= 166; y += 8) g += `<line class="st s-mut" x1="66" y1="${y + 6}" x2="114" y2="${y}"/>`;   // 绑扎
+  g += co(1, 90, 92, 150, 70, "接穗", "r");
+  g += co(2, 100, 220, 150, 220, "砧木", "r");
+  g += txt(90, 280, "甲  枝接", "tx");
+  // 乙：芽接
+  g += `<rect class="k c-brn" x="290" y="60" width="40" height="190" rx="4"/>`;
+  g += `<path class="st" d="M300 118 H320 M310 118 V160"/>`;                                          // T 形切口
+  g += `<path class="k c-leaf" d="M302 122 C300 140 304 156 310 166 C316 156 320 140 318 122 Z"/>`;   // 芽片
+  g += `<path class="k c-leaf" d="M312 140 q12 -6 16 -18 q-12 2 -16 10 Z"/>`;
+  g += co(3, 310, 152, 370, 172, "接穗（芽）", "r");
+  g += co(4, 318, 224, 370, 224, "砧木", "r");
+  g += txt(310, 280, "乙  芽接", "tx");
+  BANK.fig("graft", {
+    title: "嫁接的两种方式", vb: "20 40 480 254", maxw: 460, ch: "u6c1", kp: "植物的生殖",
+    body: g, drill: false,
+    labels: [{ n: 1, name: "接穗" }, { n: 2, name: "砧木" }, { n: 3, name: "接穗（芽）" }, { n: 4, name: "砧木" }]
+  });
+
+  /* ---------- 家蚕和蝗虫的发育 ---------- */
+  let m = "";
+  const eggs = (x, y) => [[-8, 0], [6, -4], [4, 8], [-6, 10]].map(([dx, dy]) => `<ellipse class="k c-yel" cx="${x + dx}" cy="${y + dy}" rx="5" ry="4"/>`).join("");
+  const larva = (x, y) => {
+    let s = "";
+    for (let i = 0; i < 7; i++) s += `<circle class="k c-wht" cx="${x - 24 + i * 8}" cy="${y}" r="6"/>`;
+    return s + `<circle class="k c-gry" cx="${x + 32}" cy="${y - 1}" r="6.5"/>`;
+  };
+  const pupa = (x, y) => `<ellipse class="k c-wht" cx="${x}" cy="${y}" rx="22" ry="13"/><path class="st thin s-mut" d="M${x - 12} ${y - 9} q-4 9 0 18 M${x} ${y - 12} q-4 12 0 24 M${x + 12} ${y - 9} q-4 9 0 18"/>`;
+  const moth = (x, y) => `<path class="k c-wht" d="M${x} ${y} C${x - 30} ${y - 26} ${x - 40} ${y - 4} ${x - 30} ${y + 6} Z M${x} ${y} C${x + 30} ${y - 26} ${x + 40} ${y - 4} ${x + 30} ${y + 6} Z"/>` +
+    `<path class="k c-wht" d="M${x} ${y + 2} C${x - 22} ${y + 6} ${x - 24} ${y + 20} ${x - 12} ${y + 20} Z M${x} ${y + 2} C${x + 22} ${y + 6} ${x + 24} ${y + 20} ${x + 12} ${y + 20} Z"/>` +
+    `<ellipse class="k c-gry" cx="${x}" cy="${y + 6}" rx="5" ry="15"/>`;
+  const hopper = (x, y, k, wing) => {
+    let s = `<ellipse class="k c-leaf" cx="${x}" cy="${y}" rx="${26 * k}" ry="${7 * k}"/><circle class="k c-leaf" cx="${x + 28 * k}" cy="${y - 2 * k}" r="${7 * k}"/>`;
+    s += `<path class="st" d="M${x + 6 * k} ${y + 4 * k} l${-10 * k} ${-18 * k} l${-16 * k} ${22 * k} M${x + 14 * k} ${y + 5 * k} l${2 * k} ${10 * k} M${x + 20 * k} ${y + 4 * k} l${4 * k} ${9 * k} M${x + 32 * k} ${y - 7 * k} q${10 * k} ${-14 * k} ${24 * k} ${-16 * k}"/>`;
+    if (wing) s += `<path class="k c-wat" d="M${x + 14 * k} ${y - 5 * k} L${x - 34 * k} ${y - 4 * k} L${x - 30 * k} ${y + 2 * k} L${x + 12 * k} ${y} Z"/>`;
+    return s;
+  };
+  // 家蚕（完全变态）：圆周上四个阶段
+  m += eggs(130, 40) + larva(214, 130) + pupa(130, 222) + moth(46, 118);
+  m += arr(160, 46, 196, 100) + arr(204, 146, 162, 206) + arr(104, 210, 70, 146) + arr(54, 96, 106, 50);
+  m += lbl(1, 150, 34, "受精卵", "r") + lbl(2, 250, 134, "幼虫", "r") + lbl(3, 130, 254, "蛹", "b") + lbl(4, 20, 148, "成虫", "b");
+  // 蝗虫（不完全变态）
+  m += eggs(400, 44) + hopper(456, 196, 0.7, false) + hopper(330, 196, 1, true);
+  m += arr(420, 56, 456, 172) + arr(430, 206, 380, 206) + arr(320, 170, 384, 54);
+  m += lbl(5, 420, 38, "受精卵", "r") + lbl(6, 476, 228, "若虫", "b") + lbl(7, 330, 232, "成虫", "b");
+  m += txt(130, 290, "家蚕", "tx b", "middle", 14) + txt(400, 290, "蝗虫", "tx b", "middle", 14);
+  BANK.fig("insect", {
+    title: "家蚕和蝗虫的发育过程示意图", vb: "-24 10 554 290", maxw: 520, ch: "u6c1", kp: "昆虫的生殖和发育",
+    dq: "图中{n}所示的发育阶段是",
+    body: m,
+    labels: [
+      { n: 1, name: "受精卵" }, { n: 2, name: "幼虫" },
+      { n: 3, name: "蛹", fn: "不食不动，体内发生巨大变化，是完全变态发育特有的阶段" },
+      { n: 4, name: "成虫" }, { n: 5, name: "受精卵" },
+      { n: 6, name: "若虫", fn: "形态和生活习性与成虫相似，但身体较小，生殖器官没有发育成熟" },
+      { n: 7, name: "成虫" }
+    ]
+  });
+})();
+
+/* ---- data/figures/f14_gene.js ---- */
+/* 八下第六单元第二章：染色体与基因、遗传系谱、性别遗传 */
+(function () {
+  const { co, txt, arr, cbox, lbl } = FK;
+
+  /* ---------- 细胞核、染色体、DNA 和基因的关系 ---------- */
+  let c = "";
+  c += `<circle class="k c-cyto" cx="70" cy="130" r="56"/>`;
+  c += `<circle class="k c-nuc" cx="76" cy="124" r="24"/>`;
+  const miniX = (x, y, s) => `<path class="st" style="stroke:var(--f-pur);stroke-width:3" d="M${x - s} ${y - s} L${x + s} ${y + s} M${x + s} ${y - s} L${x - s} ${y + s}"/>`;
+  c += miniX(68, 118, 5) + miniX(84, 130, 5) + miniX(72, 134, 4);
+  c += arr(134, 130, 168, 130);
+  // 放大的染色体（两条姐妹染色单体在着丝粒处相连）
+  c += `<path class="k c-pur" d="M190 70 C200 66 208 72 210 82 L222 124 L216 132 L202 90 C198 78 192 74 190 70 Z"/>`;
+  c += `<path class="k c-pur" d="M252 70 C242 66 234 72 232 82 L220 124 L226 132 L240 90 C244 78 250 74 252 70 Z"/>`;
+  c += `<path class="k c-pur" d="M190 190 C200 194 208 188 210 178 L222 136 L216 128 L202 170 C198 182 192 186 190 190 Z"/>`;
+  c += `<path class="k c-pur" d="M252 190 C242 194 234 188 232 178 L220 136 L226 128 L240 170 C244 182 250 186 252 190 Z"/>`;
+  c += `<circle class="k c-dark" cx="221" cy="130" r="5"/>`;
+  c += arr(266, 130, 298, 130);
+  // DNA：先缠绕在蛋白质上，后展开成双螺旋
+  c += `<path class="st" d="M306 130 q8 -14 16 0 q8 14 16 0 q8 -14 16 0"/>`;
+  [314, 330, 346].forEach((x, i) => { c += `<circle class="k c-org" cx="${x}" cy="${130 + (i % 2 ? 6 : -6)}" r="7"/>`; });
+  c += `<rect class="k c-yel" x="424" y="108" width="52" height="44" rx="4"/>`;
+  // 双链：上下交替，形成螺旋的样子
+  let h1 = "M354 130", h2 = "M354 130";
+  for (let x = 354, k = 0; x < 530; x += 22, k++) { const u = k % 2 ? 152 : 108, v = k % 2 ? 108 : 152; h1 += ` C${x + 7} ${u} ${x + 15} ${u} ${x + 22} 130`; h2 += ` C${x + 7} ${v} ${x + 15} ${v} ${x + 22} 130`; }
+  c += `<path class="st nf" style="stroke:var(--f-blue);stroke-width:2.2" d="${h1}"/><path class="st nf" style="stroke:var(--f-red);stroke-width:2.2" d="${h2}"/>`;
+  for (let x = 360; x < 528; x += 11) c += `<line class="st thin s-mut" x1="${x}" y1="${130 - 9 * Math.abs(Math.sin((x - 354) / 22 * Math.PI))}" x2="${x}" y2="${130 + 9 * Math.abs(Math.sin((x - 354) / 22 * Math.PI))}"/>`;
+  c += co(1, 84, 112, 130, 40, "细胞核", "r");
+  c += co(2, 204, 84, 204, 30, "染色体", "t");
+  c += co(3, 330, 124, 316, 200, "蛋白质", "b");
+  c += co(4, 398, 142, 398, 200, "DNA", "b");
+  c += co(5, 450, 112, 470, 50, "基因", "r");
+  BANK.fig("chromo", {
+    title: "细胞核、染色体、DNA和基因的关系示意图", vb: "6 0 534 224", maxw: 540, ch: "u6c2", kp: "基因在亲子代间的传递",
+    body: c,
+    labels: [
+      { n: 1, name: "细胞核", fn: "遗传信息库，染色体存在于这里" },
+      { n: 2, name: "染色体", fn: "容易被碱性染料染成深色，主要由DNA和蛋白质组成" },
+      { n: 3, name: "蛋白质" },
+      { n: 4, name: "DNA", fn: "主要的遗传物质，呈规则的双螺旋结构" },
+      { n: 5, name: "基因", fn: "具有遗传效应的DNA片段，控制生物的性状" }
+    ]
+  });
+
+  /* ---------- 白化病遗传系谱 ---------- */
+  let p = "";
+  const male = (x, y, ill) => `<rect class="k ${ill ? "c-dark" : "c-wht"}" x="${x - 12}" y="${y - 12}" width="24" height="24"/>`;
+  const fem = (x, y, ill) => `<circle class="k ${ill ? "c-dark" : "c-wht"}" cx="${x}" cy="${y}" r="12.5"/>`;
+  p += `<path class="st" d="M112 40 H168 M140 40 V80 M60 80 H220 M60 80 V98 M140 80 V98 M220 80 V98"/>`;
+  p += male(100, 40) + fem(180, 40);
+  p += male(60, 110) + fem(140, 110, true) + male(220, 110);
+  p += `<path class="st" d="M232 110 H288 M260 110 V148 M260 148 V158"/>`;
+  p += fem(300, 110) + male(260, 170, true);
+  [[100, 40, 1], [180, 40, 2], [60, 110, 3], [140, 110, 4], [220, 110, 5], [300, 110, 6], [260, 170, 7]].forEach(([x, y, n]) => { p += txt(x + 20, y + 18, n, "tx sm", "start"); });
+  p += txt(18, 44, "Ⅰ", "tx b", "middle", 14) + txt(18, 114, "Ⅱ", "tx b", "middle", 14) + txt(18, 174, "Ⅲ", "tx b", "middle", 14);
+  // 图例
+  const lx = 346;
+  p += male(lx, 40) + txt(lx + 20, 44, "正常男性", "tx sm", "start");
+  p += fem(lx, 74) + txt(lx + 20, 78, "正常女性", "tx sm", "start");
+  p += male(lx, 108, true) + txt(lx + 20, 112, "患病男性", "tx sm", "start");
+  p += fem(lx, 142, true) + txt(lx + 20, 146, "患病女性", "tx sm", "start");
+  BANK.fig("pedigree", {
+    title: "某家族白化病的遗传系谱图（基因用A、a表示）", vb: "0 18 440 180", maxw: 440, ch: "u6c2", kp: "基因的显性和隐性",
+    body: p, drill: false
+  });
+
+  /* ---------- 人的性别遗传 ---------- */
+  let s = "";
+  const R = (x, y, w) => ({ x, y, w: w || 96, h: 30 });
+  const fa = R(130, 36, 110), mo = R(350, 36, 110), sx = R(70, 126, 78), sy = R(190, 126, 78), ov = R(350, 126, 78), cg = R(130, 222, 110), cb = R(350, 222, 110);
+  s += cbox(fa, "父亲 44+XY") + cbox(mo, "母亲 44+XX") + txt(240, 41, "×", "tx b", "middle", 16);
+  s += cbox(sx, "22+X") + `<g class="bx"><rect x="${sy.x - 39}" y="${sy.y - 15}" width="78" height="30" rx="6"/></g>` + lbl(1, sy.x, sy.y, "22+Y", "c") + cbox(ov, "22+X");
+  s += `<g class="bx"><rect x="${cg.x - 55}" y="${cg.y - 15}" width="110" height="30" rx="6"/></g>` + lbl(2, cg.x, cg.y, "44+XX（女）", "c") + cbox(cb, "44+XY（男）");
+  s += `<path class="st" d="M120 51 L76 111 M140 51 L184 111 M350 51 V111"/>`;
+  s += `<path class="st" d="M76 141 L124 207 M340 141 L140 207 M360 141 V207 M196 141 L340 207"/>`;
+  s += txt(-64, 41, "亲代", "tx sm", "start") + txt(-64, 131, "生殖细胞", "tx sm", "start") + txt(-64, 227, "受精卵", "tx sm", "start");
+  s += txt(70, 104, "精子", "tx sm") + txt(190, 104, "精子", "tx sm") + txt(392, 104, "卵细胞", "tx sm", "start");
+  s += txt(240, 262, "比例　　1　　∶　　1", "tx");
+  BANK.fig("sexchr", {
+    title: "人的性别遗传示意图", vb: "-70 14 524 260", maxw: 480, ch: "u6c2", kp: "人的性别遗传",
+    body: s, drill: false,
+    labels: [{ n: 1, name: "22+Y" }, { n: 2, name: "44+XX（女）" }]
+  });
+})();
+
+/* ---- data/figures/f15_evo.js ---- */
+/* 八下第六单元第三章：米勒实验、生物进化树、地层中的化石 */
+(function () {
+  const { co, txt, arr, cbox, link, lbl } = FK;
+
+  /* ---------- 米勒模拟实验装置 ---------- */
+  let m = "";
+  m += `<path class="st thick nf" d="M90 212 V100 H262"/>`;                                   // 上方导管
+  m += `<path class="st thick nf" d="M320 158 V296 H150 Q128 296 120 272"/>`;                 // 回流导管
+  m += `<rect class="k c-wat" x="306" y="182" width="28" height="70" rx="4"/>`;              // 冷凝器外套
+  m += `<path class="st thick nf" d="M320 182 V252"/>`;
+  m += arr(352, 240, 336, 240, "ar mut", 6) + arr(304, 192, 286, 192, "ar mut", 6);
+  m += txt(356, 244, "冷水", "tx sm", "start");
+  m += `<circle class="k c-wht" cx="320" cy="100" r="58"/>`;                                 // 大烧瓶
+  m += `<path class="st" d="M280 30 L306 88 M360 30 L334 88"/><circle class="c-line" cx="306" cy="88" r="3"/><circle class="c-line" cx="334" cy="88" r="3"/>`;
+  m += `<path class="st nf" style="stroke:var(--f-red);stroke-width:1.6" d="M309 89 l5 -6 l4 9 l5 -9 l4 7 l4 -2"/>`;
+  m += `<circle class="k c-wht" cx="90" cy="246" r="36"/>`;                                  // 小烧瓶
+  m += `<path class="k c-wat" d="M55 252 A36 36 0 0 0 125 252 Z"/>`;
+  [[80, 262], [96, 270], [104, 258]].forEach(([x, y]) => { m += `<circle class="st nf" cx="${x}" cy="${y}" r="3"/>`; });
+  m += `<path class="k c-org" d="M78 316 C76 300 88 294 90 284 C92 294 104 300 102 316 Z"/>`;  // 火焰
+  m += `<circle class="k c-yel" cx="320" cy="296" r="9"/>`;                                  // 取样处
+  m += arr(170, 90, 204, 90, "ar mut", 6) + arr(262, 306, 228, 306, "ar mut", 6);
+  m += co(1, 284, 38, 236, 30, "正负电极", "l");
+  m += co(2, 322, 124, 412, 70, "原始大气", "r");
+  m += co(3, 334, 214, 412, 200, "冷凝器", "r");
+  m += co(4, 90, 266, 160, 236, "沸水", "r");
+  m += co(5, 329, 298, 412, 292, "取样活塞", "r");
+  BANK.fig("miller", {
+    title: "米勒模拟原始地球条件的实验装置示意图", vb: "20 10 480 316", maxw: 480, ch: "u6c3", kp: "生命的起源",
+    body: m,
+    labels: [
+      { n: 1, name: "正负电极", fn: "进行火花放电，模拟原始地球上的闪电" },
+      { n: 2, name: "原始大气", fn: "含甲烷、氨、氢、水蒸气等，没有氧气" },
+      { n: 3, name: "冷凝器", fn: "使水蒸气冷凝，模拟降雨" },
+      { n: 4, name: "沸水", fn: "加热后产生水蒸气，模拟原始海洋" },
+      { n: 5, name: "取样活塞", fn: "从这里取样，检测到了氨基酸等有机小分子" }
+    ]
+  });
+
+  /* ---------- 生物进化树 ---------- */
+  const T = {
+    生命: { x: 300, y: 366, w: 92, h: 26, s: "原始生命" },
+    藻类: { x: 170, y: 310, w: 92, h: 26, s: "原始藻类" },
+    苔藓: { x: 70, y: 236, w: 112, h: 26, s: "原始苔藓植物" },
+    蕨类: { x: 220, y: 236, w: 116, h: 26, n: 1, s: "原始蕨类植物" },
+    种子: { x: 220, y: 160, w: 112, h: 26, s: "原始种子植物" },
+    裸子: { x: 116, y: 86, w: 112, h: 26, s: "原始裸子植物" },
+    被子: { x: 276, y: 86, w: 116, h: 26, n: 2, s: "原始被子植物" },
+    单细胞: { x: 446, y: 310, w: 120, h: 26, s: "原始单细胞动物" },
+    无脊椎: { x: 446, y: 254, w: 120, h: 26, s: "原始无脊椎动物" },
+    鱼: { x: 446, y: 198, w: 104, h: 26, n: 3, s: "原始鱼类" },
+    两栖: { x: 446, y: 142, w: 104, h: 26, n: 4, s: "原始两栖类" },
+    爬行: { x: 446, y: 86, w: 104, h: 26, s: "原始爬行类" },
+    鸟: { x: 384, y: 30, w: 104, h: 26, n: 5, s: "原始鸟类" },
+    哺乳: { x: 520, y: 30, w: 104, h: 26, s: "原始哺乳类" }
+  };
+  let t = "";
+  [["生命", "藻类"], ["生命", "单细胞"], ["藻类", "苔藓"], ["藻类", "蕨类"], ["蕨类", "种子"], ["种子", "裸子"], ["种子", "被子"],
+    ["单细胞", "无脊椎"], ["无脊椎", "鱼"], ["鱼", "两栖"], ["两栖", "爬行"], ["爬行", "鸟"], ["爬行", "哺乳"]]
+    .forEach(([a, b]) => { t += link(T[a], T[b]); });
+  Object.values(T).forEach(r => {
+    if (r.n) t += `<g class="bx hl"><rect x="${r.x - r.w / 2}" y="${r.y - r.h / 2}" width="${r.w}" height="${r.h}" rx="6"/></g>` + lbl(r.n, r.x, r.y, r.s, "c");
+    else t += cbox(r, r.s);
+  });
+  BANK.fig("evotree", {
+    title: "生物进化树示意图（部分）", vb: "4 10 590 372", maxw: 560, ch: "u6c3", kp: "生物进化的历程",
+    dq: "图中{n}代表的生物类群是",
+    body: t,
+    labels: Object.values(T).filter(r => r.n).sort((a, b) => a.n - b.n).map(r => ({ n: r.n, name: r.s }))
+  });
+
+  /* ---------- 地层中的化石 ---------- */
+  let s = "";
+  [["甲", 20, "c-soil"], ["乙", 84, "c-bone"], ["丙", 148, "c-gry"]].forEach(([k, y, cls]) => {
+    s += `<rect class="k ${cls}" x="50" y="${y}" width="300" height="64"/>` + txt(30, y + 37, k, "tx b", "middle", 15);
+  });
+  // 丙：三叶虫、藻类
+  const tri = (x, y) => `<ellipse class="k c-wht" cx="${x}" cy="${y}" rx="15" ry="11"/><path class="st thin" d="M${x - 5} ${y - 10} V${y + 10} M${x + 5} ${y - 10} V${y + 10} M${x - 15} ${y} H${x + 15}"/>`;
+  s += tri(110, 180) + tri(250, 176) + `<path class="st" style="stroke:var(--f-chl);stroke-width:2" d="M180 206 q-6 -10 0 -20 q6 -10 0 -20 M190 206 q6 -10 0 -18"/>`;
+  // 乙：鱼、蕨类叶
+  const fish = (x, y) => `<path class="k c-wht" d="M${x - 22} ${y} C${x - 10} ${y - 12} ${x + 10} ${y - 12} ${x + 18} ${y} C${x + 10} ${y + 12} ${x - 10} ${y + 12} ${x - 22} ${y} Z M${x + 18} ${y} L${x + 30} ${y - 9} L${x + 30} ${y + 9} Z"/><circle class="c-line" cx="${x - 12}" cy="${y - 2}" r="1.8"/>`;
+  s += fish(110, 116) + fish(280, 112);
+  s += `<path class="st" style="stroke:var(--f-chl);stroke-width:1.6" d="M190 140 V96 M190 132 l-10 -6 M190 132 l10 -6 M190 120 l-10 -6 M190 120 l10 -6 M190 108 l-8 -5 M190 108 l8 -5"/>`;
+  // 甲：鸟、开花植物
+  s += `<ellipse class="k c-wht" cx="110" cy="54" rx="18" ry="9"/><circle class="k c-wht" cx="128" cy="44" r="6"/><path class="k c-wht" d="M134 44 l8 2 l-8 2 Z M94 52 l-12 -6 l2 10 Z M106 50 l10 -16 l6 14 Z"/>`;
+  s += `<path class="st" style="stroke:var(--f-chl);stroke-width:1.6" d="M270 78 V44 M270 62 q-10 -2 -12 -10 M270 58 q10 -2 12 -10"/>`;
+  [[0, -7], [7, 0], [0, 7], [-7, 0]].forEach(([dx, dy]) => { s += `<circle class="k c-pink" cx="${270 + dx}" cy="${38 + dy}" r="5"/>`; });
+  s += `<circle class="k c-yel" cx="270" cy="38" r="3.5"/>`;
+  s += arr(370, 208, 370, 24, "ar mut") + txt(380, 120, "地层越来越新", "tx sm", "start");
+  BANK.fig("strata", {
+    title: "某地三个地层中发现的化石示意图（地层未发生变动）", vb: "10 12 460 206", maxw: 440, ch: "u6c3", kp: "生物进化的证据",
+    body: s, drill: false
   });
 })();
 
@@ -2181,7 +2827,7 @@ const EXAM_SPEC = {
   a += co(1, 140, 100, 70, 120, "肺泡", "l");
   a += co(2, 290, 84, 330, 120, "毛细血管", "r");
   a += co(3, 92, 42, 150, 24, "细支气管", "r");
-  BANK.fig("alveolus", {
+  BANK.fig("alveolus", { drill: false,
     title: "肺泡与毛细血管之间的气体交换示意图", vb: "0 0 420 256", ch: "u4c3", kp: "肺内的气体交换",
     body: a,
     labels: [
@@ -3892,6 +4538,569 @@ BANK.add("u4c5", [
       { t: "o", q: "人体为什么要排尿？（写出两点意义）", a: "排出体内的代谢废物；调节体内水和无机盐的平衡；维持组织细胞的正常生理功能。", kw: ["废物", "水", "无机盐", "平衡"], p: 2 }
     ],
     e: "泌尿系统由肾脏、输尿管、膀胱、尿道组成。排尿不仅排出废物，还能调节体内水和无机盐的平衡。"
+  }
+]);
+
+/* ---- data/questions/u4c6.js ---- */
+/* 八上 第四单元 第六章 人体生命活动的调节 */
+BANK.add("u4c6", [
+  /* —— 眼与视觉 —— */
+  { id: "u4c6-001", t: "s", d: 1, kp: "眼与视觉", q: "人的视觉形成的部位是", o: ["大脑皮层的视觉中枢", "视网膜", "晶状体", "视神经"], a: 0, e: "物像在视网膜上形成，但视觉是在大脑皮层的视觉中枢形成的。", tags: ["易错", "高频"] },
+  { id: "u4c6-002", t: "s", d: 1, kp: "眼与视觉", q: "外界物体反射来的光线在眼球内形成物像的部位是", o: ["视网膜", "晶状体", "角膜", "大脑皮层"], a: 0, e: "视网膜上有对光线敏感的细胞，物像在视网膜上形成。", tags: ["高频"] },
+  { id: "u4c6-003", t: "s", d: 2, kp: "眼与视觉", q: "视觉形成的过程中，光线依次经过的结构是", o: ["角膜→瞳孔→晶状体→玻璃体→视网膜", "瞳孔→角膜→晶状体→玻璃体→视网膜", "角膜→晶状体→瞳孔→玻璃体→视网膜", "角膜→瞳孔→玻璃体→晶状体→视网膜"], a: 0, e: "光线经角膜、瞳孔、晶状体和玻璃体，在视网膜上形成物像，再由视神经传到大脑皮层的视觉中枢形成视觉。", tags: ["高频"] },
+  { id: "u4c6-004", t: "s", d: 2, kp: "眼与视觉", q: "从明亮的室外走进较暗的电影院，瞳孔的变化是", o: ["由小变大", "由大变小", "不变", "先变大后变小"], a: 0, e: "瞳孔能调节进入眼内的光量：光线强时瞳孔缩小，光线弱时瞳孔扩大。", tags: ["情境"] },
+  { id: "u4c6-005", t: "s", d: 2, kp: "眼与视觉", q: "“黑眼球”和“白眼球”分别指的是", o: ["虹膜、巩膜", "瞳孔、角膜", "虹膜、角膜", "视网膜、巩膜"], a: 0, e: "虹膜含色素，决定眼睛的颜色（黄种人多为黑色）；巩膜白色坚韧，是“白眼球”。" },
+  { id: "u4c6-006", t: "s", d: 2, kp: "眼与视觉", q: "能够调节晶状体曲度，使人看清远近不同物体的结构是", o: ["睫状体", "虹膜", "脉络膜", "巩膜"], a: 0, e: "睫状体内有平滑肌，能调节晶状体的曲度。看近处物体时晶状体曲度变大，看远处时变小。" },
+  { id: "u4c6-007", t: "s", d: 2, kp: "眼与视觉", q: "近视眼的成像特点和矫正方法是", o: ["物像落在视网膜前方，配戴凹透镜", "物像落在视网膜后方，配戴凹透镜", "物像落在视网膜前方，配戴凸透镜", "物像落在视网膜后方，配戴凸透镜"], a: 0, e: "近视眼的晶状体曲度过大或眼球前后径过长，远处物体的物像落在视网膜前方，需配戴凹透镜矫正。", tags: ["高频"] },
+  { id: "u4c6-008", t: "s", d: 2, kp: "眼与视觉", q: "下列做法中，**不利于**预防近视的是", o: ["躺在床上看手机", "读写时眼与书本保持约33厘米", "看书40分钟左右远眺几分钟", "认真做眼保健操"], a: 0, e: "预防近视要做到“三要”和“四不要”：不在直射强光下看书，不在光线暗处看书，不躺卧看书，不走路看书。", tags: ["情境"] },
+  { id: "u4c6-009", t: "s", d: 3, kp: "眼与视觉", q: "某人眼球结构完好，却看不见东西，可能发生病变的部位是", o: ["视神经或大脑皮层的视觉中枢", "角膜", "晶状体", "瞳孔"], a: 0, e: "眼球结构完好，说明能在视网膜上形成物像，看不见可能是视神经或视觉中枢出了问题。", tags: ["易错"] },
+  { id: "u4c6-010", t: "s", d: 2, kp: "眼与视觉", q: "眼球中对光线起主要折射作用、相当于照相机镜头的是", o: ["晶状体", "角膜", "玻璃体", "瞳孔"], a: 0, e: "晶状体透明、有弹性，像双凸透镜，对光线起主要折射作用。" },
+
+  /* —— 耳与听觉 —— */
+  { id: "u4c6-011", t: "s", d: 1, kp: "耳与听觉", q: "听觉形成的部位是", o: ["大脑皮层的听觉中枢", "耳蜗", "鼓膜", "听小骨"], a: 0, e: "耳蜗内有听觉感受器，产生神经冲动；听觉在大脑皮层的听觉中枢形成。", tags: ["高频"] },
+  { id: "u4c6-012", t: "s", d: 2, kp: "耳与听觉", q: "能接受声波刺激、产生神经冲动的听觉感受器位于", o: ["耳蜗", "鼓膜", "半规管", "前庭"], a: 0, e: "耳蜗内有对声波敏感的感觉细胞，能产生神经冲动。", tags: ["高频"] },
+  { id: "u4c6-013", t: "s", d: 2, kp: "耳与听觉", q: "听觉形成过程中，声波传导的正确途径是", o: ["外耳道→鼓膜→听小骨→耳蜗→听神经→听觉中枢", "外耳道→听小骨→鼓膜→耳蜗→听神经→听觉中枢", "鼓膜→外耳道→听小骨→耳蜗→听觉中枢→听神经", "外耳道→鼓膜→耳蜗→听小骨→听神经→听觉中枢"], a: 0, e: "声波经外耳道使鼓膜振动，听小骨把振动传到内耳，刺激耳蜗内的感觉细胞产生神经冲动，经听神经传到大脑皮层的听觉中枢。" },
+  { id: "u4c6-014", t: "s", d: 2, kp: "耳与听觉", q: "有的人乘车、乘船时会晕车、晕船，与之有关的结构是", o: ["前庭和半规管", "耳蜗", "鼓膜", "外耳道"], a: 0, e: "前庭和半规管内有感受头部位置变动的感受器，过于敏感的人容易晕车晕船。" },
+  { id: "u4c6-015", t: "s", d: 2, kp: "耳与听觉", q: "遇到巨大声响时，要迅速张开口，或闭嘴同时双手堵耳，目的是", o: ["使鼓膜内外气压平衡，保护鼓膜", "保护耳蜗", "保护听小骨", "防止声波进入"], a: 0, e: "张口可以使咽鼓管张开，鼓膜内外气压平衡，避免鼓膜被震破。", tags: ["情境"] },
+  { id: "u4c6-016", t: "s", d: 2, kp: "耳与听觉", q: "患感冒时如果不及时治疗，病菌可能通过哪个结构进入中耳，引起中耳炎", o: ["咽鼓管", "外耳道", "听神经", "半规管"], a: 0, e: "咽鼓管连通咽和鼓室，咽部的病菌可以经咽鼓管进入中耳。" },
+
+  /* —— 神经系统的组成 —— */
+  { id: "u4c6-017", t: "s", d: 1, kp: "神经系统的组成", q: "人体神经系统的组成是", o: ["脑、脊髓和它们发出的神经", "大脑、小脑和脑干", "脑和脊髓", "脑神经和脊神经"], a: 0, e: "神经系统由脑、脊髓和它们发出的神经组成。脑和脊髓是中枢神经系统，脑神经和脊神经是周围神经系统。", tags: ["高频"] },
+  { id: "u4c6-018", t: "s", d: 1, kp: "神经系统的组成", q: "神经系统结构和功能的基本单位是", o: ["神经元", "神经", "反射弧", "神经纤维"], a: 0, e: "神经元（神经细胞）是神经系统结构和功能的基本单位，由细胞体和突起组成。", tags: ["高频"] },
+  { id: "u4c6-019", t: "s", d: 2, kp: "神经系统的组成", q: "神经元的功能是", o: ["接受刺激，产生并传导兴奋（神经冲动）", "收缩和舒张", "保护和分泌", "运输氧气"], a: 0, e: "神经元能接受刺激，产生并传导神经冲动。" },
+  { id: "u4c6-020", t: "s", d: 1, kp: "神经系统的组成", q: "调节人体生命活动的最高级中枢位于", o: ["大脑皮层", "小脑", "脑干", "脊髓"], a: 0, e: "大脑皮层上有许多重要的神经中枢，如躯体运动中枢、躯体感觉中枢、语言中枢、视觉中枢、听觉中枢等，是最高级中枢。" },
+  { id: "u4c6-021", t: "s", d: 2, kp: "神经系统的组成", q: "醉酒的人走路摇晃、站立不稳，主要是因为酒精麻痹了", o: ["小脑", "大脑", "脑干", "脊髓"], a: 0, e: "小脑能使运动协调、准确，维持身体平衡。", tags: ["高频"] },
+  { id: "u4c6-022", t: "s", d: 2, kp: "神经系统的组成", q: "脑干受到损伤会危及生命，因为脑干中有", o: ["调节心跳、呼吸、血压等的中枢", "语言中枢", "视觉中枢", "维持平衡的中枢"], a: 0, e: "脑干中有调节心跳、呼吸、血压等基本生命活动的中枢。", tags: ["高频"] },
+  { id: "u4c6-023", t: "s", d: 2, kp: "神经系统的组成", q: "脊髓的功能是", o: ["反射和传导", "只有反射", "只有传导", "形成感觉"], a: 0, e: "脊髓中有一些低级的神经中枢，能完成一些基本反射；白质能把神经冲动传到脑，并把脑的指令传到身体各部分。" },
+  { id: "u4c6-024", t: "s", d: 2, kp: "神经系统的组成", q: "“植物人”有心跳、呼吸，但不能自主活动、没有意识，他的脑中没有受到损伤的部位可能是", o: ["脑干", "大脑", "小脑", "大脑和小脑"], a: 0, e: "“植物人”的心跳、呼吸等基本生命活动正常，说明调节这些活动的脑干没有受损。" },
+
+  /* —— 反射与反射弧 —— */
+  { id: "u4c6-025", t: "s", d: 1, kp: "反射与反射弧", q: "神经调节的基本方式是", o: ["反射", "反射弧", "神经冲动", "激素调节"], a: 0, e: "神经调节的基本方式是反射，完成反射的结构基础是反射弧。", tags: ["高频"] },
+  { id: "u4c6-026", t: "s", d: 1, kp: "反射与反射弧", q: "完成反射的结构基础是", o: ["反射弧", "神经元", "脊髓", "大脑"], a: 0, e: "反射弧包括感受器、传入神经、神经中枢、传出神经和效应器五部分。" },
+  { id: "u4c6-027", t: "s", d: 2, kp: "反射与反射弧", q: "反射弧中神经冲动传导的正确途径是", o: ["感受器→传入神经→神经中枢→传出神经→效应器", "效应器→传出神经→神经中枢→传入神经→感受器", "感受器→传出神经→神经中枢→传入神经→效应器", "神经中枢→传入神经→感受器→传出神经→效应器"], a: 0, e: "神经冲动沿感受器→传入神经→神经中枢→传出神经→效应器的方向传导。", tags: ["高频"] },
+  { id: "u4c6-028", t: "s", d: 3, kp: "反射与反射弧", q: "某人的传出神经受损，但反射弧的其他部分正常。当他的手被针刺时，会", o: ["有感觉，但不能缩手", "没有感觉，能缩手", "既有感觉，又能缩手", "既没有感觉，也不能缩手"], a: 0, e: "传出神经受损，神经冲动不能传到效应器，不能缩手；但冲动能沿脊髓的白质上传到大脑皮层，所以有感觉。", tags: ["易错"] },
+  { id: "u4c6-029", t: "s", d: 2, kp: "反射与反射弧", q: "下列反射中，属于非条件反射（简单反射）的是", o: ["膝跳反射", "望梅止渴", "谈虎色变", "听到上课铃声走进教室"], a: 0, e: "膝跳反射、眨眼反射、缩手反射、排尿反射等是生来就有的非条件反射；望梅止渴、谈虎色变等是后天形成的条件反射。", tags: ["高频"] },
+  { id: "u4c6-030", t: "s", d: 2, kp: "反射与反射弧", q: "人类特有的条件反射是", o: ["谈虎色变", "望梅止渴", "膝跳反射", "老马识途"], a: 0, e: "与语言、文字有关的条件反射是人类特有的，如谈虎色变、听故事流泪。望梅止渴是看到梅子，动物也能形成类似的条件反射。", tags: ["易错"] },
+  { id: "u4c6-031", t: "s", d: 2, kp: "反射与反射弧", q: "条件反射与非条件反射的主要区别是", o: ["条件反射是后天形成的，需要大脑皮层参与", "条件反射是生来就有的", "非条件反射需要大脑皮层参与", "两者的神经中枢都在脊髓"], a: 0, e: "非条件反射生来就有，神经中枢在大脑皮层以下；条件反射在生活中逐渐形成，需要大脑皮层的参与。" },
+  { id: "u4c6-032", t: "s", d: 2, kp: "反射与反射弧", q: "膝跳反射的神经中枢位于", o: ["脊髓", "大脑皮层", "小脑", "脑干"], a: 0, e: "膝跳反射是非条件反射，神经中枢位于脊髓。", tags: ["实验"] },
+  { id: "u4c6-033", t: "s", d: 3, kp: "反射与反射弧", q: "某人因车祸腰部脊髓受伤，导致下肢瘫痪、小便失禁，原因是", o: ["脊髓的传导功能被破坏，大脑不能控制下肢运动和排尿", "排尿反射的反射弧被破坏", "膀胱受损", "大脑皮层受损"], a: 0, e: "腰部以下的排尿反射弧仍完整，能排尿，但脊髓传导功能受损，大脑不能控制，因此小便失禁、下肢不能自主运动。", tags: ["易错"] },
+  { id: "u4c6-034", t: "s", d: 2, kp: "反射与反射弧", q: "手指被针扎后迅速缩回，然后才感到疼痛。这说明", o: ["缩手反射的中枢在脊髓，痛觉在大脑皮层形成", "缩手反射的中枢在大脑", "痛觉在脊髓形成", "缩手和痛觉同时由大脑控制"], a: 0, e: "缩手反射是由脊髓完成的简单反射，路径短；痛觉要传到大脑皮层才形成，所以先缩手后感到疼。" },
+
+  /* —— 运动 —— */
+  { id: "u4c6-035", t: "s", d: 1, kp: "运动系统", q: "人体的运动系统主要由哪几部分组成", o: ["骨、关节和骨骼肌", "骨、骨骼肌和神经", "骨、关节和血管", "肌肉、神经和关节"], a: 0, e: "运动系统主要由骨、关节和骨骼肌组成。", tags: ["高频"] },
+  { id: "u4c6-036", t: "s", d: 2, kp: "运动系统", q: "关节中能减少骨与骨之间的摩擦、使关节灵活的结构是", o: ["关节软骨和关节腔中的滑液", "关节囊", "关节头和关节窝", "韧带"], a: 0, e: "关节软骨减少摩擦、缓冲震动，关节腔中的滑液也能减少摩擦，使关节灵活；关节囊使关节牢固。", tags: ["高频"] },
+  { id: "u4c6-037", t: "s", d: 2, kp: "运动系统", q: "使关节牢固的结构是", o: ["关节囊", "关节软骨", "关节腔", "滑液"], a: 0, e: "关节囊由结缔组织构成，包绕着整个关节，把相邻两骨牢固地联系起来，囊外还有韧带。" },
+  { id: "u4c6-038", t: "s", d: 2, kp: "运动系统", q: "“脱臼”是指", o: ["关节头从关节窝里滑脱出来", "骨折", "关节软骨磨损", "肌肉拉伤"], a: 0, e: "进行剧烈运动时，关节头可能从关节窝中滑脱，这就是脱臼。" },
+  { id: "u4c6-039", t: "s", d: 2, kp: "运动系统", q: "屈肘时，肱二头肌和肱三头肌的状态分别是", o: ["收缩、舒张", "舒张、收缩", "都收缩", "都舒张"], a: 0, fig: "elbow", e: "屈肘时肱二头肌收缩、肱三头肌舒张；伸肘时肱三头肌收缩、肱二头肌舒张。", tags: ["高频"] },
+  { id: "u4c6-040", t: "s", d: 3, kp: "运动系统", q: "手提重物时，手臂自然下垂，此时肱二头肌和肱三头肌的状态是", o: ["都收缩", "都舒张", "肱二头肌收缩，肱三头肌舒张", "肱二头肌舒张，肱三头肌收缩"], a: 0, e: "提重物时两组肌肉都要收缩才能维持姿势；双臂自然下垂（不提物体）时两者都舒张。", tags: ["易错"] },
+  { id: "u4c6-041", t: "s", d: 2, kp: "运动系统", q: "一块骨骼肌两端的肌腱一般附着在", o: ["不同的骨上", "同一块骨上", "关节上", "神经上"], a: 0, e: "骨骼肌两端的肌腱跨过关节，分别附着在不同的骨上，收缩时才能牵动骨绕关节活动。" },
+  { id: "u4c6-042", t: "s", d: 2, kp: "运动系统", q: "在运动中，骨、关节和骨骼肌分别起的作用是", o: ["杠杆、支点、动力", "支点、杠杆、动力", "动力、支点、杠杆", "杠杆、动力、支点"], a: 0, e: "骨骼肌收缩提供动力，牵动骨（杠杆）绕关节（支点）活动。" },
+  { id: "u4c6-043", t: "s", d: 2, kp: "运动系统", q: "关于人体运动的叙述，**错误**的是", o: ["只要运动系统完好，就能完成各种运动", "运动需要神经系统的控制和调节", "运动所需能量来自肌肉细胞的呼吸作用", "运动需要消化、呼吸、循环等系统的配合"], a: 0, e: "运动不仅靠运动系统，还需要神经系统的调节以及消化、呼吸、循环等系统提供能量。" },
+
+  /* —— 激素调节 —— */
+  { id: "u4c6-044", t: "s", d: 2, kp: "激素调节", q: "内分泌腺与外分泌腺的主要区别是", o: ["内分泌腺没有导管，分泌物直接进入腺体内的毛细血管", "内分泌腺有导管", "内分泌腺分泌的是消化液", "外分泌腺分泌激素"], a: 0, e: "内分泌腺没有导管，分泌的激素直接进入血液；外分泌腺（如汗腺、唾液腺、肝脏）的分泌物通过导管排出。", tags: ["高频"] },
+  { id: "u4c6-045", t: "s", d: 2, kp: "激素调节", q: "下列腺体中，属于内分泌腺的是", o: ["甲状腺", "汗腺", "唾液腺", "肝脏"], a: 0, e: "垂体、甲状腺、肾上腺、胰岛、性腺等是内分泌腺；汗腺、唾液腺、肝脏等是外分泌腺。" },
+  { id: "u4c6-046", t: "s", d: 2, kp: "激素调节", q: "某人身材矮小但智力正常，可能是幼年时期哪种激素分泌不足", o: ["生长激素", "甲状腺激素", "胰岛素", "性激素"], a: 0, e: "幼年生长激素分泌不足会患侏儒症（身材矮小、智力正常）；幼年甲状腺激素不足会患呆小症（身材矮小、智力低下）。", tags: ["高频", "易错"] },
+  { id: "u4c6-047", t: "s", d: 2, kp: "激素调节", q: "幼年时甲状腺激素分泌不足，会患", o: ["呆小症", "侏儒症", "巨人症", "糖尿病"], a: 0, e: "呆小症患者身材矮小、智力低下、生殖器官发育不全。" },
+  { id: "u4c6-048", t: "s", d: 2, kp: "激素调节", q: "糖尿病患者可以通过注射某种激素进行治疗，这种激素是", o: ["胰岛素", "生长激素", "甲状腺激素", "肾上腺素"], a: 0, e: "胰岛素能调节糖类代谢，降低血糖浓度，分泌不足会患糖尿病。", tags: ["高频"] },
+  { id: "u4c6-049", t: "s", d: 3, kp: "激素调节", q: "胰岛素只能注射，不能口服，原因是", o: ["胰岛素是蛋白质，口服后会被消化而失去作用", "胰岛素味道苦", "口服后吸收太快", "胰岛素会刺激胃"], a: 0, e: "胰岛素是一种蛋白质类激素，口服会在消化道中被分解。", tags: ["易错"] },
+  { id: "u4c6-050", t: "s", d: 2, kp: "激素调节", q: "成年人甲状腺激素分泌过多，会患", o: ["甲状腺功能亢进（甲亢）", "呆小症", "侏儒症", "地方性甲状腺肿"], a: 0, e: "甲亢患者常表现为食量大但消瘦、情绪易激动、心跳加快等。" },
+  { id: "u4c6-051", t: "s", d: 2, kp: "激素调节", q: "人在紧张、激动时，心跳加快、血压升高、面红耳赤，这与哪种激素分泌增多有关", o: ["肾上腺素", "胰岛素", "生长激素", "甲状腺激素"], a: 0, e: "情绪激动时，大脑皮层兴奋，促使肾上腺分泌较多的肾上腺素，使心跳加快、血压升高。" },
+  { id: "u4c6-052", t: "s", d: 2, kp: "激素调节", q: "在蝌蚪的饲养水中加入适量甲状腺激素，蝌蚪会", o: ["提前发育成小型青蛙", "停止发育", "长成巨型蝌蚪", "死亡"], a: 0, e: "甲状腺激素能促进生长发育，加入后蝌蚪提前变态发育成小青蛙；切除甲状腺的蝌蚪则不能发育成青蛙。", tags: ["实验"] },
+  { id: "u4c6-053", t: "s", d: 2, kp: "激素调节", q: "人体的生命活动主要受什么调节", o: ["神经系统的调节，也受激素调节的影响", "只受激素调节", "只受神经调节", "受消化系统调节"], a: 0, e: "人体生命活动主要受神经系统的调节，但也受激素调节的影响，两者相互协调。" },
+  { id: "u4c6-054", t: "s", d: 2, kp: "激素调节", q: "饭后一段时间，血液中的葡萄糖含量会升高，随后又恢复正常，起主要调节作用的激素是", o: ["胰岛素", "甲状腺激素", "生长激素", "性激素"], a: 0, e: "饭后血糖升高，胰岛分泌胰岛素增多，促进葡萄糖的利用和储存，使血糖恢复正常。" },
+  { id: "u4c6-055", t: "s", d: 3, kp: "激素调节", q: "胰腺既有外分泌部又有内分泌部，它们的分泌物分别是", o: ["胰液、胰岛素", "胰岛素、胰液", "胆汁、胰岛素", "胰液、生长激素"], a: 0, e: "胰腺的外分泌部分泌胰液，经导管流入小肠；内分泌部（胰岛）分泌胰岛素，直接进入血液。" },
+
+  /* 判断题 */
+  { id: "u4c6-j01", t: "j", d: 1, kp: "眼与视觉", q: "视觉是在视网膜上形成的。", a: false, e: "视网膜上形成物像，视觉在大脑皮层的视觉中枢形成。" },
+  { id: "u4c6-j02", t: "j", d: 2, kp: "眼与视觉", q: "近视眼应配戴凸透镜矫正。", a: false, e: "近视眼配戴凹透镜。" },
+  { id: "u4c6-j03", t: "j", d: 2, kp: "耳与听觉", q: "耳蜗内有听觉感受器。", a: true, e: "耳蜗接受振动刺激产生神经冲动。" },
+  { id: "u4c6-j04", t: "j", d: 1, kp: "神经系统的组成", q: "神经元是神经系统结构和功能的基本单位。", a: true, e: "神经元由细胞体和突起组成。" },
+  { id: "u4c6-j05", t: "j", d: 2, kp: "神经系统的组成", q: "小脑有调节呼吸和心跳的中枢。", a: false, e: "调节呼吸和心跳的中枢在脑干。" },
+  { id: "u4c6-j06", t: "j", d: 2, kp: "反射与反射弧", q: "反射弧只要有一个环节受损，反射就不能完成。", a: true, e: "反射必须通过完整的反射弧。" },
+  { id: "u4c6-j07", t: "j", d: 2, kp: "反射与反射弧", q: "望梅止渴是人类特有的条件反射。", a: false, e: "望梅止渴是条件反射，但不是人类特有的；谈梅止渴才与语言有关。" },
+  { id: "u4c6-j08", t: "j", d: 1, kp: "反射与反射弧", q: "膝跳反射是生来就有的简单反射。", a: true, e: "神经中枢在脊髓。" },
+  { id: "u4c6-j09", t: "j", d: 2, kp: "运动系统", q: "骨骼肌可以推动骨，也可以拉动骨。", a: false, e: "骨骼肌只能收缩牵拉骨，不能推开骨，所以需要至少两组肌肉配合。" },
+  { id: "u4c6-j10", t: "j", d: 2, kp: "运动系统", q: "关节囊能使关节牢固，关节软骨能使关节灵活。", a: true, e: "关节腔中的滑液也能使关节灵活。" },
+  { id: "u4c6-j11", t: "j", d: 2, kp: "激素调节", q: "激素在血液中含量很多，作用很大。", a: false, e: "激素含量极少，但作用很大。" },
+  { id: "u4c6-j12", t: "j", d: 2, kp: "激素调节", q: "侏儒症是幼年时生长激素分泌不足引起的。", a: true, e: "患者身材矮小，智力正常。" },
+  { id: "u4c6-j13", t: "j", d: 2, kp: "激素调节", q: "胰岛素可以口服治疗糖尿病。", a: false, e: "胰岛素是蛋白质，口服会被消化，只能注射。" },
+  { id: "u4c6-j14", t: "j", d: 2, kp: "激素调节", q: "内分泌腺分泌的激素通过导管排出。", a: false, e: "内分泌腺没有导管，激素直接进入血液。" },
+
+  /* 非选择题 */
+  {
+    id: "u4c6-c01", t: "c", ct: "识图", d: 1, kp: "眼与视觉", fig: "eye",
+    title: "下图是眼球的基本结构示意图，请据图回答。",
+    subs: [
+      { t: "s", q: "外界物体反射来的光线，在眼球内形成物像的部位是", o: ["⑦视网膜", "④晶状体", "①角膜", "⑥玻璃体"], a: 0, p: 2 },
+      { t: "f", q: "能调节进入眼内光量的是图中____（填序号）所示的瞳孔。", a: ["③", "3"], p: 2 },
+      { t: "s", q: "长时间近距离看书会使图中哪个结构曲度过大且不能恢复，形成近视", o: ["④晶状体", "①角膜", "②虹膜", "⑨巩膜"], a: 0, p: 2 },
+      { t: "s", q: "形成视觉的部位是", o: ["大脑皮层的视觉中枢", "⑦视网膜", "⑩视神经", "④晶状体"], a: 0, p: 2 },
+      { t: "o", q: "请写出两条预防近视的做法。", a: "读写姿势正确，眼与书本保持约33厘米；看书40分钟左右要远眺几分钟；认真做眼保健操；不在强光下、暗处、躺卧或走路时看书；控制使用电子产品的时间等。", kw: ["33/距离/姿势", "远眺/休息", "眼保健操", "强光/暗/躺/走路", "电子产品/手机"], p: 2 }
+    ],
+    e: "视觉形成：光线→角膜→瞳孔→晶状体→玻璃体→视网膜（形成物像）→视神经→大脑皮层的视觉中枢（形成视觉）。"
+  },
+  {
+    id: "u4c6-c02", t: "c", ct: "识图", d: 2, kp: "耳与听觉", fig: "ear",
+    title: "下图是耳的基本结构示意图，请据图回答。",
+    subs: [
+      { t: "s", q: "接受声波刺激并产生振动的结构是", o: ["③鼓膜", "④听小骨", "⑦耳蜗", "①耳廓"], a: 0, p: 2 },
+      { t: "f", q: "含有听觉感受器的结构是图中的____（填序号）。", a: ["⑦", "7", "⑦耳蜗", "耳蜗"], p: 2 },
+      { t: "s", q: "晕车与图中哪些结构有关", o: ["⑤半规管和⑥前庭", "⑦耳蜗", "③鼓膜", "②外耳道"], a: 0, p: 2 },
+      { t: "s", q: "感冒时病菌可通过图中哪个结构进入中耳", o: ["⑨咽鼓管", "②外耳道", "⑧听神经", "⑤半规管"], a: 0, p: 2 },
+      { t: "f", q: "听觉是在____的听觉中枢形成的。", a: ["大脑皮层", "大脑"], p: 2 }
+    ],
+    e: "听觉形成：声波→外耳道→鼓膜（振动）→听小骨→耳蜗（产生神经冲动）→听神经→大脑皮层的听觉中枢。前庭和半规管与平衡有关。"
+  },
+  {
+    id: "u4c6-c03", t: "c", ct: "识图", d: 2, kp: "反射与反射弧", fig: "reflexarc",
+    title: "下图是反射弧的结构示意图，请据图回答。",
+    subs: [
+      { t: "s", q: "图中①～⑤共同构成反射弧，其中③是", o: ["神经中枢", "感受器", "效应器", "传入神经"], a: 0, p: 2 },
+      { t: "s", q: "神经冲动在反射弧中的传导方向是", o: ["①→②→③→④→⑤", "⑤→④→③→②→①", "①→④→③→②→⑤", "③→②→①→④→⑤"], a: 0, p: 2 },
+      { t: "s", q: "若图中④受损，刺激①后", o: ["有感觉，但不能完成反射", "没有感觉，但能完成反射", "既有感觉又能完成反射", "既没有感觉也不能完成反射"], a: 0, p: 2 },
+      { t: "s", q: "图示反射的神经中枢在脊髓，这种反射属于", o: ["非条件反射（简单反射）", "条件反射（复杂反射）", "人类特有的反射", "不是反射"], a: 0, p: 2 },
+      { t: "f", q: "图中⑥是脊髓的____质，是神经元细胞体集中的部位。", a: ["灰"], p: 2 }
+    ],
+    e: "反射弧由感受器、传入神经、神经中枢、传出神经、效应器组成。传出神经受损时，冲动仍可经脊髓上传到大脑，有感觉但不能完成反射。"
+  },
+  {
+    id: "u4c6-c04", t: "c", ct: "识图", d: 2, kp: "运动系统", fig: "joint",
+    title: "下图是关节的基本结构示意图，请据图回答。",
+    subs: [
+      { t: "s", q: "使关节牢固的结构是", o: ["⑤关节囊", "②关节软骨", "③关节腔", "①关节头"], a: 0, p: 2 },
+      { t: "s", q: "能减少骨与骨之间摩擦的结构是", o: ["②关节软骨", "⑤关节囊", "④关节窝", "①关节头"], a: 0, p: 2 },
+      { t: "f", q: "图中③内有____，可以减少摩擦，使关节活动灵活。", a: ["滑液"], p: 2 },
+      { t: "s", q: "运动时用力过猛，①从④中滑脱出来，这种现象叫", o: ["脱臼", "骨折", "扭伤", "拉伤"], a: 0, p: 2 }
+    ],
+    e: "关节由关节面（关节头、关节窝，表面有关节软骨）、关节囊和关节腔组成。关节囊使关节牢固，关节软骨和滑液使关节灵活。"
+  },
+  {
+    id: "u4c6-c05", t: "c", ct: "实验", d: 2, kp: "激素调节",
+    title: "某兴趣小组探究甲状腺激素对蝌蚪生长发育的影响，实验设计如下表。",
+    m: "<table><tr><th>组别</th><th>处理方法</th><th>实验结果</th></tr><tr><td>甲</td><td>10只蝌蚪，饲养在普通池塘水中，喂普通饲料</td><td>正常发育成青蛙</td></tr><tr><td>乙</td><td>10只蝌蚪，饲养在普通池塘水中，喂含甲状腺激素的饲料</td><td>提前发育成小型青蛙</td></tr><tr><td>丙</td><td>10只蝌蚪，破坏甲状腺，喂普通饲料</td><td>停止发育，不能变成青蛙</td></tr></table>",
+    subs: [
+      { t: "s", q: "甲组在实验中的作用是", o: ["作对照", "增加实验数量", "可以省略", "观察蝌蚪的寿命"], a: 0, p: 2 },
+      { t: "s", q: "甲组和乙组对照，变量是", o: ["饲料中是否含甲状腺激素", "蝌蚪的数量", "池塘水", "温度"], a: 0, p: 2 },
+      { t: "o", q: "综合三组结果，可以得出什么结论？", a: "甲状腺激素能促进蝌蚪的生长发育（变态发育）。", kw: ["甲状腺激素", "促进"], p: 2 },
+      { t: "s", q: "每组用10只蝌蚪而不是1只，目的是", o: ["避免偶然性，使结果更可靠", "节省饲料", "便于饲养", "让蝌蚪长得更快"], a: 0, p: 2 },
+      { t: "f", q: "人在幼年时如果甲状腺激素分泌不足，会患____。", a: ["呆小症"], p: 2 }
+    ],
+    e: "甲状腺激素能促进新陈代谢和生长发育。实验中甲组为对照组，乙、丙组分别是增加和缺少甲状腺激素的实验组。"
+  },
+  {
+    id: "u4c6-c06", t: "c", ct: "资料", d: 2, kp: "激素调节",
+    title: "阅读资料，回答问题。",
+    m: "资料一：小华的爷爷经常口渴、尿多、吃得多却越来越瘦，到医院检查，尿液中含有葡萄糖，血糖浓度明显高于正常值。\n资料二：小明在比赛前非常紧张，心跳加快、手心出汗；比赛结束后很快就平静下来了。\n资料三：19世纪，科学家发现切除胰腺的狗，尿液中出现了葡萄糖，还会出现类似糖尿病的症状。",
+    subs: [
+      { t: "f", q: "资料一中小华的爷爷可能患有____病。", a: ["糖尿", "糖尿病"], p: 2 },
+      { t: "s", q: "资料一中这种疾病通常是因为哪种激素分泌不足", o: ["胰岛素", "生长激素", "甲状腺激素", "肾上腺素"], a: 0, p: 2 },
+      { t: "s", q: "资料二中，小明紧张时心跳加快，是哪种调节方式共同作用的结果", o: ["神经调节和激素调节", "只有激素调节", "只有神经调节", "免疫调节"], a: 0, p: 2 },
+      { t: "o", q: "资料三说明了什么？", a: "胰腺中有分泌调节血糖的物质（胰岛素）的结构（胰岛），胰腺与调节血糖浓度有关。", kw: ["胰腺/胰岛", "血糖/糖"], p: 2 }
+    ],
+    e: "胰岛分泌的胰岛素能降低血糖，不足时患糖尿病（多饮、多尿、多食、消瘦）。人体生命活动主要受神经系统调节，也受激素调节的影响。"
+  }
+]);
+
+/* ---- data/questions/u4c7.js ---- */
+/* 八上 第四单元 第七章 健康地生活 */
+BANK.add("u4c7", [
+  /* —— 传染病及其预防 —— */
+  { id: "u4c7-001", t: "s", d: 1, kp: "传染病及其预防", q: "传染病是由什么引起的", o: ["病原体", "遗传物质改变", "营养缺乏", "激素分泌异常"], a: 0, e: "传染病是由病原体（细菌、病毒、真菌、寄生虫等）引起的，能在人与人之间或人与动物之间传播的疾病。", tags: ["高频"] },
+  { id: "u4c7-002", t: "s", d: 1, kp: "传染病及其预防", q: "传染病具有的特点是", o: ["传染性和流行性", "遗传性和传染性", "流行性和遗传性", "免疫性和遗传性"], a: 0, e: "传染病具有传染性和流行性的特点。" },
+  { id: "u4c7-003", t: "s", d: 1, kp: "传染病及其预防", q: "传染病能够流行，必须同时具备的三个基本环节是", o: ["传染源、传播途径、易感人群", "病原体、传染源、传播途径", "病原体、传播途径、易感人群", "传染源、病原体、易感人群"], a: 0, e: "传染病流行必须同时具备传染源、传播途径和易感人群三个基本环节，缺少任何一个环节，传染病就流行不起来。", tags: ["高频"] },
+  { id: "u4c7-004", t: "s", d: 2, kp: "传染病及其预防", q: "流行性感冒期间，从传染病的角度分析，流感患者和流感病毒分别属于", o: ["传染源、病原体", "病原体、传染源", "易感人群、病原体", "传染源、传播途径"], a: 0, e: "能够散播病原体的人或动物是传染源；引起传染病的细菌、病毒等是病原体。", tags: ["易错", "高频"] },
+  { id: "u4c7-005", t: "s", d: 2, kp: "传染病及其预防", q: "将传染病患者隔离治疗，属于预防传染病措施中的", o: ["控制传染源", "切断传播途径", "保护易感人群", "消灭病原体"], a: 0, e: "对患者早发现、早报告、早隔离、早治疗，属于控制传染源。", tags: ["高频"] },
+  { id: "u4c7-006", t: "s", d: 2, kp: "传染病及其预防", q: "在流感高发季节，教室经常开窗通风、喷洒消毒液，这属于预防措施中的", o: ["切断传播途径", "控制传染源", "保护易感人群", "消灭病原体"], a: 0, e: "通风、消毒、戴口罩、勤洗手、消灭蚊蝇等都属于切断传播途径。" },
+  { id: "u4c7-007", t: "s", d: 2, kp: "传染病及其预防", q: "给儿童接种疫苗、加强体育锻炼，属于预防传染病措施中的", o: ["保护易感人群", "控制传染源", "切断传播途径", "治疗患者"], a: 0, e: "预防接种、锻炼身体增强免疫力，都属于保护易感人群。" },
+  { id: "u4c7-008", t: "s", d: 2, kp: "传染病及其预防", q: "下列疾病中，属于传染病的是", o: ["肺结核", "糖尿病", "近视", "坏血病"], a: 0, e: "肺结核由结核杆菌引起，能传播，是传染病；糖尿病、近视、坏血病都不是由病原体引起的。", tags: ["高频"] },
+  { id: "u4c7-009", t: "s", d: 2, kp: "传染病及其预防", q: "下列传染病中，主要通过饮食传播的是", o: ["细菌性痢疾", "流行性感冒", "疟疾", "狂犬病"], a: 0, e: "细菌性痢疾、甲型肝炎、蛔虫病等主要通过饮食传播；流感通过空气飞沫传播；疟疾通过蚊虫叮咬传播；狂犬病通过动物咬伤传播。" },
+  { id: "u4c7-010", t: "s", d: 2, kp: "传染病及其预防", q: "艾滋病是由人类免疫缺陷病毒（HIV）引起的，下列行为**不会**传播艾滋病的是", o: ["与艾滋病患者握手、共同进餐", "共用注射器", "输入带病毒的血液", "母婴传播"], a: 0, e: "艾滋病主要通过血液、性接触和母婴传播，日常的握手、拥抱、共同进餐、共用浴室一般不会传播。", tags: ["高频"] },
+  { id: "u4c7-011", t: "s", d: 2, kp: "传染病及其预防", q: "艾滋病病毒主要攻击和破坏人体的", o: ["免疫系统（淋巴细胞）", "消化系统", "运动系统", "生殖系统"], a: 0, e: "HIV主要攻击人体的淋巴细胞，使免疫功能严重缺陷，患者容易被多种病原体感染。" },
+  { id: "u4c7-012", t: "s", d: 2, kp: "传染病及其预防", q: "某地暴发诺如病毒感染，患者出现呕吐、腹泻。为防止扩散，学校采取了下列措施，其中属于切断传播途径的是", o: ["对餐具和呕吐物进行消毒，要求饭前便后洗手", "让患病学生居家隔离治疗", "教育学生加强锻炼", "给全体学生检测体温"], a: 0, e: "消毒、洗手阻断了病原体经饮食或接触传播的途径；隔离治疗是控制传染源；加强锻炼是保护易感人群。", tags: ["情境"] },
+  { id: "u4c7-013", t: "s", d: 3, kp: "传染病及其预防", q: "对于传染病的预防，下列说法正确的是", o: ["切断任何一个基本环节，就能阻止传染病的流行", "必须同时切断三个环节才能预防", "只要接种疫苗就不会患任何传染病", "病原体就是传染源"], a: 0, e: "传染病流行必须三个环节同时具备，切断其中任意一个环节，传染病就流行不起来。疫苗只对相应的传染病有效。" },
+
+  /* —— 免疫与免疫规划 —— */
+  { id: "u4c7-014", t: "s", d: 1, kp: "免疫", q: "人体的第一道防线是", o: ["皮肤和黏膜", "体液中的杀菌物质和吞噬细胞", "免疫器官和免疫细胞", "淋巴细胞产生的抗体"], a: 0, e: "皮肤和黏膜是第一道防线；体液中的杀菌物质和吞噬细胞是第二道防线；免疫器官和免疫细胞是第三道防线。", tags: ["高频"] },
+  { id: "u4c7-015", t: "s", d: 2, kp: "免疫", q: "吞噬细胞吞噬侵入人体的病菌，属于", o: ["第二道防线，非特异性免疫", "第一道防线，非特异性免疫", "第三道防线，特异性免疫", "第二道防线，特异性免疫"], a: 0, e: "体液中的杀菌物质和吞噬细胞构成第二道防线，生来就有，对多种病原体都有防御作用，属于非特异性免疫。", tags: ["高频"] },
+  { id: "u4c7-016", t: "s", d: 2, kp: "免疫", q: "特异性免疫的特点是", o: ["出生后才产生，只针对某一特定的病原体或异物起作用", "生来就有，对多种病原体都起作用", "由皮肤和黏膜完成", "由吞噬细胞完成"], a: 0, e: "特异性免疫是第三道防线，出生以后接触病原体等才逐渐建立，具有特异性。", tags: ["高频"] },
+  { id: "u4c7-017", t: "s", d: 2, kp: "免疫", q: "注射乙肝疫苗后，人体会产生抵抗乙肝病毒的抗体。从免疫的角度看，乙肝疫苗属于", o: ["抗原", "抗体", "病原体", "传染源"], a: 0, e: "疫苗是用减毒、灭活的病原体等制成的，进入人体后能刺激淋巴细胞产生抗体，属于抗原。", tags: ["易错", "高频"] },
+  { id: "u4c7-018", t: "s", d: 2, kp: "免疫", q: "抗体是由哪种细胞产生的", o: ["淋巴细胞", "吞噬细胞", "红细胞", "血小板"], a: 0, e: "病原体（抗原）刺激淋巴细胞产生抵抗该病原体的特殊蛋白质，即抗体。" },
+  { id: "u4c7-019", t: "s", d: 2, kp: "免疫", q: "得过麻疹的人一般不会再得麻疹，但仍可能患流感，原因是", o: ["体内产生的麻疹抗体只能抵抗麻疹病毒", "麻疹病毒已经全部消失", "流感病毒更厉害", "得过麻疹后免疫力下降"], a: 0, e: "抗体具有特异性，麻疹病毒刺激产生的抗体只对麻疹病毒有作用，对流感病毒无效。" },
+  { id: "u4c7-020", t: "s", d: 2, kp: "免疫", q: "有的人吃了鱼虾后会出现皮肤瘙痒、起红疹等症状，这是", o: ["过敏反应，免疫功能过强", "免疫功能过弱", "传染病", "遗传病"], a: 0, e: "过敏反应是免疫的防御功能过强造成的，引起过敏反应的物质叫过敏原。" },
+  { id: "u4c7-021", t: "s", d: 3, kp: "免疫", q: "进行器官移植后，病人需要长期使用免疫抑制药物，原因是", o: ["移植的器官相当于抗原，会被免疫系统排斥", "移植的器官相当于抗体", "免疫抑制药物能提供营养", "防止病人患传染病"], a: 0, e: "移植的器官对受者来说是“非己”的抗原，会引起免疫排斥反应，需要用免疫抑制药物抑制排斥。", tags: ["易错"] },
+  { id: "u4c7-022", t: "s", d: 2, kp: "免疫", q: "人体免疫的功能**不包括**", o: ["为细胞提供营养", "抵抗抗原侵入，防止疾病发生", "清除体内衰老、死亡和损伤的细胞", "识别和清除体内产生的异常细胞（如肿瘤细胞）"], a: 0, e: "免疫的功能有防御、自我稳定和免疫监视三方面。" },
+  { id: "u4c7-023", t: "s", d: 2, kp: "免疫规划", q: "我国对适龄儿童有计划地进行预防接种，现在称为", o: ["免疫规划", "器官移植", "抗生素治疗", "隔离治疗"], a: 0, e: "根据传染病发生规律，按照科学的免疫程序，有计划地给人群接种疫苗，新教材称为免疫规划（旧称计划免疫）。", tags: ["高频"] },
+  { id: "u4c7-024", t: "s", d: 2, kp: "免疫规划", q: "新生儿接种卡介苗，可以预防", o: ["肺结核", "乙肝", "麻疹", "小儿麻痹症"], a: 0, e: "卡介苗用于预防结核病（肺结核）。" },
+  { id: "u4c7-025", t: "s", d: 2, kp: "免疫规划", q: "通过接种疫苗获得的免疫，属于", o: ["特异性免疫", "非特异性免疫", "第一道防线", "第二道防线"], a: 0, e: "疫苗刺激淋巴细胞产生相应抗体，只对特定病原体起作用，属于特异性免疫。" },
+  { id: "u4c7-026", t: "s", d: 3, kp: "免疫", q: "下列免疫现象中，属于非特异性免疫的是", o: ["呼吸道黏膜上的纤毛清扫异物", "接种麻疹疫苗预防麻疹", "患过水痘的人不再患水痘", "注射破伤风抗毒素"], a: 0, e: "黏膜上的纤毛属于第一道防线，是非特异性免疫；其余都是针对特定病原体的特异性免疫。" },
+
+  /* —— 用药与急救 —— */
+  { id: "u4c7-027", t: "s", d: 1, kp: "用药与急救", q: "药品包装上标有“OTC”字样，表示", o: ["非处方药", "处方药", "进口药", "过期药"], a: 0, e: "OTC是非处方药的标志，不需要医师处方即可购买，按说明书服用；Rx表示处方药。", tags: ["高频"] },
+  { id: "u4c7-028", t: "s", d: 2, kp: "用药与急救", q: "下列关于安全用药的说法，正确的是", o: ["用药前要仔细阅读药品说明书", "药吃得越多，病好得越快", "感冒了就要吃抗生素", "别人用过效果好的药，自己也可以随便吃"], a: 0, e: "安全用药要根据病情恰当选药，按说明书或医嘱确定剂量和时间；抗生素只对细菌有效，不能滥用。", tags: ["情境"] },
+  { id: "u4c7-029", t: "s", d: 2, kp: "用药与急救", q: "遇到有人突然晕倒、心跳骤停时，应首先拨打的急救电话是", o: ["120", "110", "119", "122"], a: 0, e: "120是急救电话，拨打时要说清楚地点和病人情况。" },
+  { id: "u4c7-030", t: "s", d: 2, kp: "用药与急救", q: "某人受伤后，伤口流出的血呈鲜红色，并从伤口喷射而出。他受伤的血管是", o: ["动脉", "静脉", "毛细血管", "无法判断"], a: 0, e: "动脉出血颜色鲜红、血流速度快，呈喷射状；静脉出血颜色暗红，连续不断地流出；毛细血管出血呈红色，慢慢渗出。", tags: ["高频"] },
+  { id: "u4c7-031", t: "s", d: 2, kp: "用药与急救", q: "动脉出血时，正确的止血部位是", o: ["伤口的近心端", "伤口的远心端", "伤口处", "任意部位"], a: 0, e: "动脉中的血液从心脏流向全身，压迫伤口的近心端才能阻止血液流向伤口；静脉出血则压迫远心端。", tags: ["高频", "易错"] },
+  { id: "u4c7-032", t: "s", d: 2, kp: "用药与急救", q: "手指不小心被划破，有少量血液慢慢渗出，正确的处理方法是", o: ["清洗、消毒后用创可贴包扎", "在近心端用止血带扎紧", "在远心端用止血带扎紧", "立即送医院输血"], a: 0, e: "这是毛细血管出血，一般会自行凝固，消毒后贴创可贴即可。" },
+  { id: "u4c7-033", t: "s", d: 2, kp: "用药与急救", q: "进行心肺复苏时，胸外按压与人工呼吸的次数比一般是", o: ["30∶2", "2∶30", "15∶1", "1∶1"], a: 0, e: "心肺复苏时每按压30次，进行2次人工呼吸。" },
+  { id: "u4c7-034", t: "s", d: 2, kp: "用药与急救", q: "进行口对口人工呼吸前，首先要做的是", o: ["清除病人口鼻内的异物和污物，保持呼吸道畅通", "让病人坐起来", "给病人喝水", "给病人吃药"], a: 0, e: "人工呼吸前要先清除口鼻中的异物，使病人仰卧、头后仰，保持呼吸道畅通。" },
+  { id: "u4c7-035", t: "s", d: 3, kp: "用药与急救", q: "有人吃东西时被食物卡住气道，不能说话、呼吸困难，可采用的急救方法是", o: ["海姆立克急救法", "胸外按压", "让他平躺休息", "给他大量喝水"], a: 0, e: "气道异物梗阻时可用海姆立克急救法：从背后抱住患者，一手握拳顶住其肚脐上方，另一手包住拳头，快速向内上方冲击。" },
+  { id: "u4c7-036", t: "s", d: 2, kp: "用药与急救", q: "静脉出血时，正确的止血方法是", o: ["在伤口的远心端压迫止血", "在伤口的近心端压迫止血", "不需要处理", "用热水冲洗伤口"], a: 0, e: "静脉中的血液从全身流回心脏，压迫伤口的远心端可以止血。" },
+
+  /* —— 选择健康的生活方式 —— */
+  { id: "u4c7-037", t: "s", d: 1, kp: "健康的生活方式", q: "按照世界卫生组织的定义，健康是指", o: ["身体上、心理上和社会适应方面的良好状态", "身体没有疾病", "身体强壮", "心情愉快"], a: 0, e: "健康不仅仅是没有疾病或不虚弱，而是身体上、心理上和社会适应方面的良好状态。" },
+  { id: "u4c7-038", t: "s", d: 2, kp: "健康的生活方式", q: "青少年心理健康的核心是", o: ["心情愉快", "身体强壮", "学习成绩好", "朋友多"], a: 0, e: "心情愉快是儿童青少年心理健康的核心。" },
+  { id: "u4c7-039", t: "s", d: 2, kp: "健康的生活方式", q: "遇到不顺心的事情时，下列调节情绪的方法**不恰当**的是", o: ["摔东西、打人发泄", "转移注意力，做自己喜欢的事", "向亲友倾诉", "自我安慰"], a: 0, e: "调节情绪的方法有转移注意力、宣泄（找合适的对象和方法）、自我安慰等，摔东西、打人是不恰当的宣泄方式。" },
+  { id: "u4c7-040", t: "s", d: 2, kp: "健康的生活方式", q: "吸烟有害健康，烟草燃烧产生的有害物质中，能致癌的主要是", o: ["焦油", "氧气", "水蒸气", "二氧化碳"], a: 0, e: "烟草燃烧产生尼古丁、焦油、一氧化碳等有害物质，焦油中含有多种致癌物质。" },
+  { id: "u4c7-041", t: "s", d: 2, kp: "健康的生活方式", q: "长期酗酒对人体危害很大，酒精会麻醉神经系统，还主要损伤", o: ["肝脏", "骨骼", "皮肤", "毛发"], a: 0, e: "酒精主要在肝脏中分解，长期酗酒会导致酒精性肝炎、肝硬化等。" },
+  { id: "u4c7-042", t: "s", d: 2, kp: "健康的生活方式", q: "下列关于毒品的说法，**错误**的是", o: ["吸食一次毒品不会成瘾", "毒品会严重损害神经系统", "吸毒会降低人体免疫力", "我们要坚决拒绝毒品"], a: 0, e: "毒品极易成瘾，即使只吸一次也可能成瘾，要坚决拒绝。" },
+  { id: "u4c7-043", t: "s", d: 2, kp: "健康的生活方式", q: "下列生活方式中，属于健康生活方式的是", o: ["按时作息，坚持体育锻炼", "经常熬夜玩手机", "只吃喜欢吃的食物", "长时间沉迷网络游戏"], a: 0, e: "健康的生活方式包括合理营养、适量运动、按时作息、不吸烟不酗酒、拒绝毒品、积极参加集体活动等。" },
+  { id: "u4c7-044", t: "s", d: 2, kp: "健康的生活方式", q: "心血管疾病、癌症等被称为“生活方式病”，主要原因是", o: ["与不健康的生活方式有关", "由病原体引起", "只与遗传有关", "只有老年人才会得"], a: 0, e: "这些疾病除受遗传和环境影响外，与吸烟、酗酒、缺乏运动、饮食不合理等不健康的生活方式密切相关。" },
+  { id: "u4c7-045", t: "s", d: 3, kp: "健康的生活方式", q: "探究“酒精对水蚤心率的影响”时，每只水蚤先在清水中测心率，再在某一浓度的酒精中测心率。顺序不能颠倒的原因是", o: ["酒精会影响水蚤的心率，先测酒精后测清水会使清水组数据不准确", "清水中水蚤心率太快", "为了节约酒精", "水蚤在清水中容易死亡"], a: 0, e: "酒精对水蚤有残留影响，先在清水中测，可以排除酒精对清水组数据的干扰。", tags: ["实验"] },
+
+  /* 判断题 */
+  { id: "u4c7-j01", t: "j", d: 1, kp: "传染病及其预防", q: "病原体就是传染源。", a: false, e: "病原体是引起传染病的生物，传染源是能散播病原体的人或动物。" },
+  { id: "u4c7-j02", t: "j", d: 2, kp: "传染病及其预防", q: "与艾滋病患者握手会感染艾滋病。", a: false, e: "一般的生活接触不会传播艾滋病。" },
+  { id: "u4c7-j03", t: "j", d: 2, kp: "传染病及其预防", q: "接种疫苗属于预防传染病措施中的保护易感人群。", a: true, e: "接种疫苗使人获得免疫力。" },
+  { id: "u4c7-j04", t: "j", d: 1, kp: "免疫", q: "皮肤和黏膜是保卫人体的第一道防线。", a: true, e: "能阻挡和杀死病原体。" },
+  { id: "u4c7-j05", t: "j", d: 2, kp: "免疫", q: "特异性免疫是生来就有的。", a: false, e: "特异性免疫是出生后逐渐建立的，非特异性免疫才是生来就有的。" },
+  { id: "u4c7-j06", t: "j", d: 2, kp: "免疫", q: "疫苗从免疫学的角度看属于抗体。", a: false, e: "疫苗属于抗原。" },
+  { id: "u4c7-j07", t: "j", d: 2, kp: "免疫", q: "免疫功能越强越好。", a: false, e: "免疫的防御功能过强会引起过敏反应。" },
+  { id: "u4c7-j08", t: "j", d: 1, kp: "用药与急救", q: "非处方药可以自行购买，按说明书服用。", a: true, e: "标有OTC。" },
+  { id: "u4c7-j09", t: "j", d: 2, kp: "用药与急救", q: "动脉出血应在伤口的远心端压迫止血。", a: false, e: "动脉出血压迫近心端。" },
+  { id: "u4c7-j10", t: "j", d: 2, kp: "用药与急救", q: "抗生素可以治疗所有疾病。", a: false, e: "抗生素主要对细菌有效，对病毒无效，滥用还会产生耐药性。" },
+  { id: "u4c7-j11", t: "j", d: 1, kp: "健康的生活方式", q: "健康就是身体没有疾病。", a: false, e: "健康还包括心理和社会适应方面的良好状态。" },
+  { id: "u4c7-j12", t: "j", d: 2, kp: "健康的生活方式", q: "吸烟不仅危害自己，也会危害周围的人。", a: true, e: "二手烟同样有害。" },
+
+  /* 非选择题 */
+  {
+    id: "u4c7-c01", t: "c", ct: "资料", d: 2, kp: "传染病及其预防",
+    title: "阅读资料，回答问题。",
+    m: "冬春季节是流行性感冒的高发期。流感是由流感病毒引起的急性呼吸道传染病，主要通过飞沫传播。某学校发现几名学生发热、咳嗽，确诊为流感后，学校采取了以下措施：①让患病学生回家隔离治疗；②教室每天开窗通风，并对桌椅、门把手消毒；③要求学生勤洗手、戴口罩；④建议学生接种流感疫苗；⑤组织学生加强体育锻炼。",
+    subs: [
+      { t: "s", q: "从传染病的角度看，流感病毒属于", o: ["病原体", "传染源", "传播途径", "易感人群"], a: 0, p: 2 },
+      { t: "s", q: "措施①属于预防传染病措施中的", o: ["控制传染源", "切断传播途径", "保护易感人群", "消灭病原体"], a: 0, p: 2 },
+      { t: "s", q: "措施②③属于", o: ["切断传播途径", "控制传染源", "保护易感人群", "治疗患者"], a: 0, p: 2 },
+      { t: "f", q: "措施④⑤属于预防传染病措施中的保护____。", a: ["易感人群"], p: 2 },
+      { t: "s", q: "接种流感疫苗后，人体获得的免疫属于", o: ["特异性免疫", "非特异性免疫", "第一道防线", "第二道防线"], a: 0, p: 2 }
+    ],
+    e: "预防传染病的措施：控制传染源（隔离治疗患者）、切断传播途径（通风、消毒、洗手、戴口罩）、保护易感人群（接种疫苗、锻炼身体）。"
+  },
+  {
+    id: "u4c7-c02", t: "c", ct: "资料", d: 2, kp: "免疫",
+    title: "阅读资料，回答问题。",
+    m: "资料一：天花是一种烈性传染病。18世纪末，英国医生琴纳发现挤牛奶的女工感染牛痘后就不再患天花，于是给人接种牛痘来预防天花。1980年，世界卫生组织宣布全球已消灭天花。\n资料二：小红对花粉过敏，春天出门时常打喷嚏、流鼻涕。\n资料三：器官移植手术后，病人需要服用药物来防止对移植器官产生排斥反应。",
+    subs: [
+      { t: "s", q: "资料一中，接种的牛痘病毒相当于", o: ["抗原", "抗体", "传染源", "免疫细胞"], a: 0, p: 2 },
+      { t: "s", q: "接种牛痘后人体产生的免疫属于", o: ["特异性免疫", "非特异性免疫", "第一道防线", "第二道防线"], a: 0, p: 2 },
+      { t: "s", q: "资料二中小红的症状是免疫的哪项功能过强引起的", o: ["防御功能", "自我稳定功能", "免疫监视功能", "消化功能"], a: 0, p: 2 },
+      { t: "o", q: "资料三中，从免疫的角度看，移植的器官相当于什么？为什么会发生排斥反应？", a: "移植的器官相当于抗原，人体的免疫系统会把它识别为“非己”成分并加以攻击，所以产生排斥反应。", kw: ["抗原", "非己/识别/攻击"], p: 2 }
+    ],
+    e: "疫苗、移植器官都相当于抗原；接种疫苗获得特异性免疫。过敏反应是防御功能过强的表现。我国通过免疫规划有效控制了多种传染病。"
+  },
+  {
+    id: "u4c7-c03", t: "c", ct: "实验", d: 3, kp: "健康的生活方式",
+    title: "某兴趣小组探究“不同浓度的酒精对水蚤心率的影响”，结果如下表（每组数据为多只水蚤的平均值）。",
+    m: "<table><tr><th>酒精浓度</th><th>清水</th><th>1%</th><th>5%</th><th>10%</th><th>15%</th><th>20%</th></tr><tr><td>10秒内心跳次数</td><td>33</td><td>30</td><td>24</td><td>21</td><td>17</td><td>死亡</td></tr></table>",
+    subs: [
+      { t: "s", q: "设置清水组的目的是", o: ["作对照", "让水蚤休息", "节省酒精", "可以省略"], a: 0, p: 2 },
+      { t: "s", q: "实验的变量是", o: ["酒精浓度", "水蚤的数量", "温度", "观察时间"], a: 0, p: 2 },
+      { t: "o", q: "根据表中数据，可以得出什么结论？", a: "酒精对水蚤的心率有抑制作用，酒精浓度越高，水蚤心率越低；浓度过高会导致水蚤死亡。", kw: ["抑制/降低/减慢", "浓度越高/越大"], p: 2 },
+      { t: "s", q: "每组要用多只水蚤并取平均值，目的是", o: ["减小误差，避免偶然性", "增加实验的乐趣", "节约时间", "让水蚤繁殖"], a: 0, p: 2 },
+      { t: "o", q: "这个实验对你有什么启示？", a: "饮酒有害健康，青少年不要饮酒（不酗酒）。", kw: ["不/拒绝/少", "酒"], p: 2 }
+    ],
+    e: "实验结果表明酒精对水蚤心率有抑制作用，浓度越高影响越大。实验中设置清水对照组，用多只水蚤取平均值减小误差。"
+  },
+  {
+    id: "u4c7-c04", t: "c", ct: "综合", d: 2, kp: "用药与急救",
+    title: "情境分析：放学路上，小明看到一位老人突然倒地，呼之不应，没有呼吸和心跳；旁边另一位骑车摔倒的人小腿受伤，伤口流出暗红色的血，连续不断。",
+    subs: [
+      { t: "s", q: "小明应首先拨打的急救电话是", o: ["120", "110", "119", "114"], a: 0, p: 2 },
+      { t: "s", q: "对倒地老人进行心肺复苏，胸外按压的部位是", o: ["胸骨下段（两乳头连线中点附近）", "腹部", "背部", "左侧胸部上方"], a: 0, p: 2 },
+      { t: "s", q: "骑车人受伤的血管最可能是", o: ["静脉", "动脉", "毛细血管", "无法判断"], a: 0, p: 2 },
+      { t: "s", q: "对骑车人的伤口应在何处压迫止血", o: ["伤口的远心端", "伤口的近心端", "伤口正上方的大腿根部", "不需要止血"], a: 0, p: 2 }
+    ],
+    e: "遇到紧急情况先拨打120。心肺复苏按压胸骨下段，按压与吹气比为30∶2。静脉出血血色暗红、连续流出，压迫远心端；动脉出血鲜红喷射，压迫近心端。"
+  }
+]);
+
+/* ---- data/questions/u5c1.js ---- */
+/* 八上 第五单元 第一章 生态系统 */
+BANK.add("u5c1", [
+  /* —— 生物与环境的关系 —— */
+  { id: "u5c1-001", t: "s", d: 1, kp: "生物与环境的关系", q: "环境中影响生物的生活和分布的因素叫做", o: ["生态因素", "非生物因素", "生物因素", "食物因素"], a: 0, e: "环境中影响生物生活和分布的因素叫生态因素，分为非生物因素（光、温度、水、空气、土壤等）和生物因素（影响某种生物生活的其他生物）。" },
+  { id: "u5c1-002", t: "s", d: 1, kp: "生物与环境的关系", q: "下列属于影响生物生活的非生物因素的是", o: ["温度", "细菌", "杂草", "害虫"], a: 0, e: "光、温度、水、空气、土壤等属于非生物因素；细菌、杂草、害虫都是生物，属于生物因素。" },
+  { id: "u5c1-003", t: "s", d: 2, kp: "生物与环境的关系", q: "“人间四月芳菲尽，山寺桃花始盛开。”造成山上桃花比山下开得晚的主要非生物因素是", o: ["温度", "光照", "水分", "土壤"], a: 0, e: "海拔越高，气温越低，山上的桃花开得晚，主要是温度的影响。", tags: ["高频"] },
+  { id: "u5c1-004", t: "s", d: 2, kp: "生物与环境的关系", q: "“雨露滋润禾苗壮”主要体现了哪种非生物因素对生物的影响", o: ["水", "温度", "空气", "光"], a: 0, e: "雨露为禾苗提供水分，体现了水对生物的影响。" },
+  { id: "u5c1-005", t: "s", d: 2, kp: "生物与环境的关系", q: "“种豆南山下，草盛豆苗稀。”诗句中草与豆苗之间的关系是", o: ["竞争", "捕食", "合作", "寄生"], a: 0, e: "草和豆苗相互争夺阳光、水分、无机盐和生存空间，属于竞争关系。", tags: ["高频"] },
+  { id: "u5c1-006", t: "s", d: 2, kp: "生物与环境的关系", q: "“螳螂捕蝉，黄雀在后”描述的生物之间的关系主要是", o: ["捕食", "竞争", "合作", "寄生"], a: 0, e: "螳螂吃蝉、黄雀吃螳螂，都是吃与被吃的捕食关系。" },
+  { id: "u5c1-007", t: "s", d: 2, kp: "生物与环境的关系", q: "一群蚂蚁共同把一条大青虫拖回蚁穴，蚂蚁个体之间的关系是", o: ["合作", "竞争", "捕食", "寄生"], a: 0, e: "同种生物个体之间相互协助、共同维持群体生活，属于合作关系。" },
+  { id: "u5c1-008", t: "s", d: 2, kp: "生物与环境的关系", q: "菟丝子缠绕在大豆植株上，用吸器吸取大豆体内的营养物质，菟丝子与大豆的关系是", o: ["寄生", "竞争", "合作", "捕食"], a: 0, e: "菟丝子生活在大豆体表，从大豆体内获取营养并对其造成伤害，属于寄生。" },
+  { id: "u5c1-009", t: "s", d: 2, kp: "生物与环境的关系", q: "仙人掌的叶变成了刺，茎肥厚多汁，能够在干旱的沙漠中生活。这说明", o: ["生物能适应环境", "生物能影响环境", "环境不影响生物", "生物与环境没有关系"], a: 0, e: "叶变成刺可减少水分散失，茎肥厚能储存水分，是仙人掌对干旱环境的适应。" },
+  { id: "u5c1-010", t: "s", d: 2, kp: "生物与环境的关系", q: "下列实例中，属于生物影响环境的是", o: ["蚯蚓在土壤中钻洞，使土壤疏松", "沙漠中的骆驼刺根系非常发达", "北极熊皮下有厚厚的脂肪", "秋天大雁成群结队飞往南方"], a: 0, e: "蚯蚓疏松土壤、提高土壤肥力，是生物对环境的影响；骆驼刺、北极熊、大雁迁徙都是生物对环境的适应。", tags: ["高频", "易错"] },
+  { id: "u5c1-011", t: "s", d: 2, kp: "生物与环境的关系", q: "“大树底下好乘凉”说明了", o: ["生物能影响环境", "生物能适应环境", "环境能影响生物", "环境能改变生物"], a: 0, e: "大树通过蒸腾作用降低周围温度、增加空气湿度，还能遮挡阳光，体现了生物对环境的影响。", tags: ["易错"] },
+  { id: "u5c1-012", t: "s", d: 2, kp: "生物与环境的关系", q: "枯叶蝶停在树枝上时，样子很像一片枯叶，不易被天敌发现。这体现了", o: ["生物对环境的适应", "生物对环境的影响", "环境对生物的影响", "生物之间的竞争"], a: 0, e: "枯叶蝶的形态与环境相似，不易被天敌发现，是对环境的适应。" },
+  { id: "u5c1-013", t: "s", d: 3, kp: "生物与环境的关系", q: "探究“光对鼠妇分布的影响”时，下列做法正确的是", o: ["除光照不同外，其他条件都相同且适宜", "只用1只鼠妇进行实验", "纸盒两侧分别放干土和湿土", "实验结束后把鼠妇丢进垃圾桶"], a: 0, e: "对照实验只能有一个变量（光），其他条件都要相同且适宜；鼠妇数量要多一些以避免偶然性；实验后要把鼠妇放回自然环境。", tags: ["实验", "高频"] },
+  { id: "u5c1-014", t: "s", d: 2, kp: "生物与环境的关系", q: "在“光对鼠妇分布的影响”实验中，用10只鼠妇而不用1只，是为了", o: ["避免偶然性，减小误差", "让实验更有趣", "便于观察鼠妇的形态结构", "让鼠妇繁殖后代"], a: 0, e: "只用1只鼠妇，结果可能受偶然因素影响，用多只可以减小误差，使结论更可靠。", tags: ["实验"] },
+  { id: "u5c1-015", t: "s", d: 1, kp: "生物与环境的关系", q: "鼠妇适宜生活的环境是", o: ["阴暗、潮湿的地方", "明亮、干燥的地方", "明亮、潮湿的地方", "阴暗、干燥的地方"], a: 0, e: "鼠妇常生活在石块、花盆下等阴暗潮湿的地方。" },
+  { id: "u5c1-016", t: "s", d: 3, kp: "生物与环境的关系", q: "某同学要探究“水分对鼠妇分布的影响”，他设置的实验变量应该是", o: ["土壤的干湿程度", "光照的强弱", "温度的高低", "鼠妇的数量"], a: 0, e: "探究水分的影响，变量就是水分（土壤的干与湿），光照、温度、鼠妇数量等都要相同。", tags: ["实验"] },
+
+  /* —— 生态系统的组成 —— */
+  { id: "u5c1-017", t: "s", d: 1, kp: "生态系统的组成", q: "在一定的空间范围内，生物与环境所形成的统一整体叫做", o: ["生态系统", "食物链", "食物网", "生物因素"], a: 0, e: "生态系统是在一定空间范围内，生物与环境所形成的统一整体。" },
+  { id: "u5c1-018", t: "s", d: 2, kp: "生态系统的组成", q: "下列可以看作一个生态系统的是", o: ["一片农田", "一群羊", "池塘中所有的鱼", "森林中所有的树"], a: 0, e: "生态系统既包括全部生物，也包括非生物环境。一片农田包含了其中的生物和环境；其余选项只有部分生物。", tags: ["高频", "易错"] },
+  { id: "u5c1-019", t: "s", d: 1, kp: "生态系统的组成", q: "生态系统中的生产者主要是", o: ["绿色植物", "动物", "细菌和真菌", "病毒"], a: 0, e: "绿色植物能通过光合作用制造有机物，是生态系统中的生产者。" },
+  { id: "u5c1-020", t: "s", d: 1, kp: "生态系统的组成", q: "生态系统中的分解者主要是", o: ["细菌和真菌", "绿色植物", "植食性动物", "肉食性动物"], a: 0, e: "营腐生生活的细菌和真菌是生态系统中的分解者。" },
+  { id: "u5c1-021", t: "s", d: 2, kp: "生态系统的组成", q: "分解者在生态系统中的作用是", o: ["把动植物遗体中的有机物分解成无机物，供植物重新利用", "制造有机物，为其他生物提供食物", "帮助植物传粉、传播种子", "为生态系统提供太阳能"], a: 0, e: "分解者把动植物遗体、遗物中的有机物分解为二氧化碳、水和无机盐，归还到环境中，促进物质循环。" },
+  { id: "u5c1-022", t: "s", d: 2, kp: "生态系统的组成", q: "在生态系统中，能把无机物合成有机物并储存能量的成分是", o: ["生产者", "消费者", "分解者", "非生物部分"], a: 0, e: "生产者通过光合作用把二氧化碳和水合成有机物，把光能转化为化学能储存在有机物中。" },
+  { id: "u5c1-023", t: "s", d: 2, kp: "生态系统的组成", q: "一个完整的生态系统包括", o: ["生物部分和非生物部分", "生产者、消费者和分解者", "所有的动物和植物", "食物链和食物网"], a: 0, e: "生态系统由生物部分（生产者、消费者、分解者）和非生物部分（阳光、空气、水等）组成，只有生物部分不能构成生态系统。", tags: ["高频", "易错"] },
+  { id: "u5c1-024", t: "s", d: 2, kp: "生态系统的组成", q: "关于动物在生态系统中的作用，下列说法正确的是", o: ["动物作为消费者，能促进生态系统的物质循环", "动物能利用光能制造有机物", "动物都是分解者", "动物对植物的生长有害无益"], a: 0, e: "动物是消费者，能促进物质循环，还能帮助植物传粉、传播种子，在维持生态平衡中起重要作用。" },
+  { id: "u5c1-025", t: "s", d: 2, kp: "生态系统的组成", q: "下列生物中，属于分解者的是", o: ["蘑菇", "水稻", "蝗虫", "青蛙"], a: 0, e: "蘑菇是营腐生生活的真菌，属于分解者；水稻是生产者；蝗虫、青蛙是消费者。" },
+  { id: "u5c1-026", t: "s", d: 3, kp: "生态系统的组成", q: "蚯蚓以土壤中的腐烂落叶等为食，它在生态系统中扮演的角色是", o: ["分解者", "生产者", "消费者", "非生物部分"], a: 0, e: "蚯蚓、蜣螂等以动植物遗体、遗物为食的腐生动物，能把有机物分解成无机物，属于分解者。", tags: ["易错"] },
+
+  /* —— 食物链和食物网 —— */
+  { id: "u5c1-027", t: "s", d: 2, kp: "食物链和食物网", q: "下列能正确表示一条食物链的是", o: ["草→兔→鹰", "阳光→草→兔→鹰", "草←兔←鹰", "兔→鹰→细菌"], a: 0, e: "食物链从生产者开始，箭头指向吃它的生物，不包括非生物部分（阳光）和分解者（细菌）。", tags: ["高频"] },
+  { id: "u5c1-028", t: "s", d: 1, kp: "食物链和食物网", q: "食物链的起点是", o: ["生产者", "消费者", "分解者", "太阳"], a: 0, e: "食物链的起点是生产者（绿色植物），终点是不被其他动物捕食的消费者。" },
+  { id: "u5c1-029", t: "s", d: 2, kp: "食物链和食物网", q: "在食物链“水稻→蝗虫→青蛙→蛇”中，如果青蛙被大量捕杀，短时间内数量会明显增加的是", o: ["蝗虫", "蛇", "水稻", "青蛙"], a: 0, e: "青蛙减少，蝗虫失去天敌，数量会增加；蛇因食物减少而减少，水稻因被蝗虫大量取食而减少。", tags: ["高频"] },
+  { id: "u5c1-030", t: "s", d: 1, kp: "食物链和食物网", q: "食物链和食物网中，各种生物之间主要存在的是", o: ["吃与被吃的关系", "互相帮助的关系", "共同生活的关系", "寄生关系"], a: 0, e: "食物链是生产者和消费者之间因吃与被吃而形成的关系。" },
+  { id: "u5c1-031", t: "s", d: 3, kp: "食物链和食物网", q: "在“草→鼠→蛇→鹰”这条食物链中，如果鹰的数量增加，短时间内", o: ["蛇的数量会减少", "鼠的数量会减少", "草的数量会增加", "蛇的数量会增加"], a: 0, e: "鹰捕食蛇，鹰增多会使蛇减少；蛇减少后鼠因天敌减少而增多，草被鼠大量取食而减少。" },
+  { id: "u5c1-032", t: "s", d: 2, kp: "食物链和食物网", q: "根据“螳螂捕蝉，黄雀在后”，下列食物链书写正确的是", o: ["树→蝉→螳螂→黄雀", "蝉→螳螂→黄雀", "黄雀→螳螂→蝉→树", "树←蝉←螳螂←黄雀"], a: 0, e: "食物链必须从生产者（树）开始，箭头指向捕食者：树→蝉→螳螂→黄雀。", tags: ["高频"] },
+  { id: "u5c1-033", t: "s", d: 2, kp: "食物链和食物网", q: "某湖泊被难以分解的有毒物质DDT污染，在“浮游植物→浮游动物→小鱼→大鱼”这条食物链中，体内DDT含量最高的是", o: ["大鱼", "小鱼", "浮游动物", "浮游植物"], a: 0, e: "有毒物质沿食物链逐级积累（生物富集），位于食物链末端的大鱼体内含量最高。", tags: ["高频"] },
+  { id: "u5c1-034", t: "s", d: 2, kp: "食物链和食物网", q: "有毒物质会通过食物链不断积累，其原因是", o: ["有毒物质在生物体内难以分解，也不易排出", "有毒物质能被生物迅速分解", "越高级的消费者吃的食物越少", "有毒物质只存在于水中"], a: 0, e: "DDT、重金属等有毒物质性质稳定，在生物体内难以分解、不易排出，随着取食逐级积累。" },
+  { id: "u5c1-035", t: "s", d: 3, kp: "食物链和食物网", q: "在一个食物网中，鹰既吃蛇又吃鼠，蛇也吃鼠。鹰和蛇之间的关系是", o: ["捕食和竞争", "只有捕食", "只有竞争", "合作"], a: 0, e: "鹰吃蛇是捕食关系；鹰和蛇都吃鼠，又是竞争关系。", tags: ["易错"] },
+
+  /* —— 能量流动和物质循环 —— */
+  { id: "u5c1-036", t: "s", d: 1, kp: "能量流动和物质循环", q: "生态系统中能量的最终来源是", o: ["太阳能", "绿色植物", "食物", "土壤"], a: 0, e: "生产者通过光合作用固定太阳能，太阳能是生态系统能量的最终来源。", tags: ["高频"] },
+  { id: "u5c1-037", t: "s", d: 2, kp: "能量流动和物质循环", q: "生态系统中能量流动的特点是", o: ["沿食物链单向流动，逐级递减", "循环流动，逐级递增", "单向流动，逐级递增", "循环流动，逐级递减"], a: 0, e: "能量沿着食物链单向流动、逐级递减，一般只有10%～20%传递到下一个环节。", tags: ["高频"] },
+  { id: "u5c1-038", t: "s", d: 2, kp: "能量流动和物质循环", q: "在食物链“草→兔→狐”中，所含能量最多的生物是", o: ["草", "兔", "狐", "三者一样多"], a: 0, e: "能量逐级递减，位于食物链起点的生产者（草）所含能量最多。" },
+  { id: "u5c1-039", t: "s", d: 2, kp: "能量流动和物质循环", q: "生态系统中物质循环的特点是", o: ["物质在生物与无机环境之间反复循环", "物质只能从无机环境流向生物", "物质沿食物链单向流动，不能循环", "物质只在生物之间循环"], a: 0, e: "组成生物体的碳、氢、氧、氮等元素，在生物与无机环境之间反复循环。" },
+  { id: "u5c1-040", t: "s", d: 2, kp: "能量流动和物质循环", q: "绿色植物在生态系统的物质循环中起重要作用，是因为它能", o: ["通过光合作用把无机物转变成有机物", "把有机物分解成无机物", "吸收氧气，释放二氧化碳", "分解动植物的遗体"], a: 0, e: "绿色植物通过光合作用把二氧化碳和水等无机物转变为有机物，使无机环境中的物质进入生物体。" },
+  { id: "u5c1-041", t: "s", d: 2, kp: "能量流动和物质循环", q: "如果一个生态系统中没有分解者，将会出现的情况是", o: ["动植物遗体堆积如山，物质循环受阻", "生产者会大量增加", "消费者会大量增加", "生态系统不受任何影响"], a: 0, e: "没有分解者，动植物遗体中的有机物不能分解为无机物回归环境，物质循环无法进行。" },
+  { id: "u5c1-042", t: "s", d: 3, kp: "能量流动和物质循环", q: "一般来说，食物链越往后，生物的数量越少，主要原因是", o: ["能量沿食物链逐级递减", "后面的生物繁殖能力强", "后面的生物寿命长", "物质沿食物链循环"], a: 0, e: "每一环节都有大量能量通过呼吸作用散失，传到下一环节的能量越来越少，能养活的生物也越来越少。" },
+
+  /* —— 生态系统的自我调节 —— */
+  { id: "u5c1-043", t: "s", d: 2, kp: "生态系统的自我调节", q: "在生态系统中，各种生物的数量和所占的比例总是维持在相对稳定的状态，这说明生态系统具有", o: ["一定的自我调节能力", "无限的自我调节能力", "很强的繁殖能力", "固定不变的结构"], a: 0, e: "生态系统具有一定的自我调节能力，使生物的数量和比例保持相对稳定（生态平衡）。" },
+  { id: "u5c1-044", t: "s", d: 2, kp: "生态系统的自我调节", q: "下列生态系统中，自我调节能力最强的是", o: ["热带雨林生态系统", "农田生态系统", "草原生态系统", "城市生态系统"], a: 0, e: "热带雨林生物种类最多，营养结构最复杂，自我调节能力最强。", tags: ["高频"] },
+  { id: "u5c1-045", t: "s", d: 2, kp: "生态系统的自我调节", q: "生态系统自我调节能力的大小主要取决于", o: ["生物的种类和数量多少、营养结构的复杂程度", "生产者的高矮", "非生物因素的多少", "消费者体形的大小"], a: 0, e: "生物种类越多，食物链和食物网越复杂，自我调节能力就越强。" },
+  { id: "u5c1-046", t: "s", d: 3, kp: "生态系统的自我调节", q: "某草原为保护鹿群而大量捕杀狼，结果鹿的数量先迅速增多，后又急剧减少。鹿急剧减少的主要原因是", o: ["鹿过多，植被被破坏，食物严重缺乏", "鹿的繁殖能力突然下降", "气候突然变化", "狼的数量迅速增加"], a: 0, e: "失去天敌后鹿大量繁殖，过度啃食使植被遭到破坏，鹿因缺乏食物而大量死亡，说明自我调节能力是有限度的。", tags: ["情境"] },
+  { id: "u5c1-047", t: "s", d: 2, kp: "生态系统的自我调节", q: "下列关于生态平衡的说法，正确的是", o: ["生态平衡是一种动态的、相对的平衡", "生态平衡时各种生物的数量恒定不变", "生态系统的自我调节能力是无限的", "外界的干扰不会破坏生态平衡"], a: 0, e: "生态平衡是动态的、相对的平衡；当外界干扰超过一定限度时，生态平衡就会被破坏。" },
+
+  /* —— 生态系统的类型和生物圈 —— */
+  { id: "u5c1-048", t: "s", d: 1, kp: "生态系统的类型", q: "被称为“地球之肾”的生态系统是", o: ["湿地生态系统", "森林生态系统", "海洋生态系统", "草原生态系统"], a: 0, e: "湿地具有净化水质、蓄洪抗旱的作用，被称为“地球之肾”。", tags: ["高频"] },
+  { id: "u5c1-049", t: "s", d: 1, kp: "生态系统的类型", q: "有“绿色水库”“地球之肺”之称的生态系统是", o: ["森林生态系统", "湿地生态系统", "农田生态系统", "城市生态系统"], a: 0, e: "森林能涵养水源、保持水土，还能吸收二氧化碳、释放氧气，有“绿色水库”“地球之肺”之称。" },
+  { id: "u5c1-050", t: "s", d: 2, kp: "生态系统的类型", q: "下列生态系统中，人起主导作用、受人类活动影响最大的是", o: ["城市生态系统", "森林生态系统", "海洋生态系统", "草原生态系统"], a: 0, e: "城市生态系统中人类起主导作用，植物种类和数量少，消费者主要是人类。" },
+  { id: "u5c1-051", t: "s", d: 1, kp: "生物圈", q: "地球上最大的生态系统是", o: ["生物圈", "海洋生态系统", "森林生态系统", "草原生态系统"], a: 0, e: "生物圈是地球上所有生物与其环境的总和，是最大的生态系统，是所有生物共同的家园。", tags: ["高频"] },
+  { id: "u5c1-052", t: "s", d: 2, kp: "生物圈", q: "生物圈的范围包括", o: ["大气圈的底部、水圈的大部和岩石圈的表面", "整个大气圈、水圈和岩石圈", "大气圈的上部、水圈的表层和岩石圈的深处", "地球上所有的陆地和海洋"], a: 0, e: "生物圈包括大气圈的底部、水圈的大部和岩石圈的表面。", tags: ["高频"] },
+  { id: "u5c1-053", t: "s", d: 2, kp: "生物圈", q: "长江发源于青藏高原，沿途流经森林、农田、湿地、城市等多种生态系统，最后注入东海。这说明", o: ["各种生态系统之间是相互联系的", "各种生态系统是彼此孤立的", "生物圈中只有一种生态系统", "生态系统之间没有物质交流"], a: 0, e: "各类生态系统通过河流、大气、生物迁移等相互关联，生物圈是一个统一的整体。" },
+  { id: "u5c1-054", t: "s", d: 2, kp: "生态系统的类型", q: "娄底新化紫鹊界梯田所在的山上森林、竹林茂密，梯田虽然没有修建水库，却常年有水灌溉。这主要体现了森林的哪项作用", o: ["涵养水源", "防风固沙", "调节气温", "提供木材"], a: 0, e: "森林植被和土壤能蓄积雨水、缓慢释放，起到涵养水源、保持水土的作用，为梯田持续供水。", tags: ["情境"] },
+  { id: "u5c1-055", t: "s", d: 2, kp: "制作生态瓶", q: "制作生态瓶时，下列做法正确的是", o: ["把生态瓶放在有散射光的地方", "把生态瓶放在黑暗的柜子里", "瓶内放入尽可能多的小鱼", "瓶内只放小鱼不放水草"], a: 0, e: "生态瓶应放在有散射光处，使水草能进行光合作用；动物不宜过多，生产者、消费者、分解者要搭配合理。", tags: ["实验"] },
+  { id: "u5c1-056", t: "s", d: 3, kp: "能量流动和物质循环", fig: "epyramid", q: "下图表示某生态系统中构成一条食物链的四种生物所含能量的相对值。下列说法正确的是", o: ["该食物链可表示为丁→丙→乙→甲", "甲是生产者", "乙所含的能量最多", "若甲大量减少，短时间内乙的数量会减少"], a: 0, e: "能量沿食物链逐级递减，所含能量最多的丁是生产者，食物链为丁→丙→乙→甲。甲减少后，乙失去天敌，数量会增加。", tags: ["识图"] },
+  /* 判断题 */
+  { id: "u5c1-j01", t: "j", d: 1, kp: "生态系统的组成", q: "生态系统的生物部分包括生产者、消费者和分解者。", a: true, e: "生物部分由这三类成分组成。" },
+  { id: "u5c1-j02", t: "j", d: 1, kp: "食物链和食物网", q: "食物链的起点是太阳。", a: false, e: "食物链的起点是生产者。" },
+  { id: "u5c1-j03", t: "j", d: 2, kp: "能量流动和物质循环", q: "能量在生态系统中是循环流动的。", a: false, e: "能量单向流动、逐级递减；物质才是循环的。" },
+  { id: "u5c1-j04", t: "j", d: 2, kp: "食物链和食物网", q: "有毒物质沿食物链积累，越靠近食物链末端的生物，体内有毒物质越多。", a: true, e: "这种现象叫生物富集。" },
+  { id: "u5c1-j05", t: "j", d: 2, kp: "生态系统的组成", q: "一片森林中所有的树木可以构成一个生态系统。", a: false, e: "生态系统包括全部生物和非生物环境。" },
+  { id: "u5c1-j06", t: "j", d: 1, kp: "生态系统的自我调节", q: "生态系统的自我调节能力是有一定限度的。", a: true, e: "外界干扰超过限度，生态平衡会被破坏。" },
+  { id: "u5c1-j07", t: "j", d: 2, kp: "生物与环境的关系", q: "蚯蚓能疏松土壤，说明生物能适应环境。", a: false, e: "这说明生物能影响环境。" },
+  { id: "u5c1-j08", t: "j", d: 1, kp: "生物圈", q: "生物圈是地球上最大的生态系统。", a: true, e: "生物圈是所有生物共同的家园。" },
+  { id: "u5c1-j09", t: "j", d: 1, kp: "生物与环境的关系", q: "在“光对鼠妇分布的影响”实验中，实验的变量是光。", a: true, e: "其他条件都应相同。" },
+  { id: "u5c1-j10", t: "j", d: 1, kp: "生态系统的类型", q: "湿地生态系统被称为“地球之肾”。", a: true, e: "湿地能净化水质、蓄洪抗旱。" },
+  { id: "u5c1-j11", t: "j", d: 2, kp: "食物链和食物网", q: "在食物网中，两种生物之间可能既有捕食关系，又有竞争关系。", a: true, e: "如鹰吃蛇，鹰和蛇又都吃鼠。" },
+  { id: "u5c1-j12", t: "j", d: 2, kp: "生态系统的自我调节", q: "农田生态系统中生物种类少，自我调节能力比森林生态系统强。", a: false, e: "生物种类越少，自我调节能力越弱。" },
+
+  /* 非选择题 */
+  {
+    id: "u5c1-c01", t: "c", ct: "识图", d: 2, kp: "食物链和食物网", fig: "foodweb",
+    title: "下图是某草原生态系统的食物网示意图，请据图回答。",
+    subs: [
+      { t: "s", q: "该食物网中共有食物链", o: ["5条", "4条", "6条", "3条"], a: 0, p: 2 },
+      { t: "s", q: "该食物网中最长的一条食物链是", o: ["草→鼠→蛇→鹰", "草→兔→鹰", "草→鼠→鹰", "草→兔→狐"], a: 0, p: 2 },
+      { t: "s", q: "鹰和蛇之间的关系是", o: ["捕食和竞争", "只有捕食", "只有竞争", "合作"], a: 0, p: 2 },
+      { t: "s", q: "图中的草属于生态系统中的", o: ["生产者", "消费者", "分解者", "非生物部分"], a: 0, p: 2 },
+      { t: "o", q: "图中只表示了生态系统的部分成分，要构成一个完整的生态系统，还缺少哪些成分？", a: "还缺少分解者和非生物部分。", kw: ["分解者", "非生物"], p: 2 }
+    ],
+    e: "数食物链要从生产者开始，沿箭头数到最高级消费者：草→兔→狐、草→兔→鹰、草→鼠→狐、草→鼠→鹰、草→鼠→蛇→鹰，共5条。食物网只包含生产者和消费者。"
+  },
+  {
+    id: "u5c1-c02", t: "c", ct: "识图", d: 2, kp: "能量流动和物质循环", fig: "ecocycle",
+    title: "下图为生态系统中的物质循环示意图，甲、乙、丙代表生态系统中的生物成分，①～④表示生理过程，请据图回答。",
+    subs: [
+      { t: "s", q: "图中甲、乙、丙分别代表", o: ["生产者、消费者、分解者", "消费者、生产者、分解者", "分解者、消费者、生产者", "生产者、分解者、消费者"], a: 0, p: 2 },
+      { t: "s", q: "图中①表示的生理过程是", o: ["光合作用", "呼吸作用", "分解作用", "蒸腾作用"], a: 0, p: 2 },
+      { t: "f", q: "图中④表示丙通过____作用，把动植物遗体中的有机物分解成二氧化碳等无机物。", a: ["分解"], p: 2 },
+      { t: "s", q: "流经该生态系统的能量最终来源于", o: ["太阳能", "乙所含的能量", "丙分解释放的能量", "二氧化碳中的能量"], a: 0, p: 2 },
+      { t: "o", q: "如果该生态系统中没有丙，会出现什么后果？", a: "动植物的遗体和遗物会堆积如山，其中的有机物不能被分解成无机物归还环境，生态系统的物质循环就会受阻。", kw: ["遗体/堆积", "物质循环/无机物"], p: 2 }
+    ],
+    e: "甲能吸收大气中的二氧化碳（光合作用），是生产者；乙以甲为食，是消费者；甲、乙的遗体遗物流向丙，丙是分解者。三者的呼吸作用和分解作用都把二氧化碳返回大气。"
+  },
+  {
+    id: "u5c1-c03", t: "c", ct: "实验", d: 2, kp: "生物与环境的关系", fig: "woodlouse",
+    title: "某生物兴趣小组探究“光对鼠妇分布的影响”，装置如图。在纸盒中央放入10只鼠妇，静置2分钟后，每分钟统计一次明亮处和阴暗处的鼠妇数目，共统计10次。",
+    subs: [
+      { t: "s", q: "该实验提出的问题是", o: ["光会影响鼠妇的分布吗？", "水分会影响鼠妇的分布吗？", "温度会影响鼠妇的分布吗？", "鼠妇喜欢吃什么食物？"], a: 0, p: 2 },
+      { t: "s", q: "该实验的变量是", o: ["光", "水分", "温度", "土壤"], a: 0, p: 2 },
+      { t: "s", q: "纸盒两侧都铺上湿土，目的是", o: ["保证除光以外的其他条件都相同", "为鼠妇提供食物", "使土壤透气", "增加一个实验变量"], a: 0, p: 2 },
+      { t: "s", q: "为了使实验结论更准确，对统计数据应如何处理", o: ["计算多次统计（或全班各组）数据的平均值", "只采用第一次统计的数据", "选用其中最大的数据", "选用其中最小的数据"], a: 0, p: 2 },
+      { t: "o", q: "实验结束后，应怎样处理这些鼠妇？", a: "把鼠妇放回适合它们生存的自然环境中。", kw: ["放回", "自然/适合"], p: 2 }
+    ],
+    e: "实验结果是阴暗处的鼠妇多，说明光会影响鼠妇的分布，鼠妇喜欢生活在阴暗的环境中。对照实验要控制单一变量，用多只鼠妇、多次统计取平均值可减小误差。"
+  },
+  {
+    id: "u5c1-c04", t: "c", ct: "资料", d: 2, kp: "食物链和食物网",
+    title: "某湖泊受到一种难以分解的有毒物质污染。科研人员测定了湖中甲、乙、丙、丁四种生物体内该物质的含量（这四种生物构成一条食物链），结果如下表，请分析回答。",
+    m: "<table><tr><th>生物</th><th>甲</th><th>乙</th><th>丙</th><th>丁</th></tr><tr><td>有毒物质含量（毫克/千克）</td><td>0.05</td><td>7</td><td>0.51</td><td>68</td></tr></table>",
+    subs: [
+      { t: "s", q: "这四种生物构成的食物链是", o: ["甲→丙→乙→丁", "丁→乙→丙→甲", "甲→乙→丙→丁", "丙→甲→乙→丁"], a: 0, p: 2 },
+      { t: "s", q: "四种生物中属于生产者的是", o: ["甲", "乙", "丙", "丁"], a: 0, p: 2 },
+      { t: "o", q: "丁体内有毒物质含量最高，原因是什么？", a: "有毒物质在生物体内难以分解、不易排出，会沿着食物链逐级积累，丁处于这条食物链的最末端，所以体内积累得最多。", kw: ["难以分解/不易排出", "积累/末端/最高"], p: 2 },
+      { t: "s", q: "在这条食物链中，所含能量最多的生物是", o: ["甲", "丁", "乙", "丙"], a: 0, p: 2 }
+    ],
+    e: "有毒物质沿食物链逐级积累（生物富集），含量由少到多的顺序就是食物链的顺序。能量沿食物链逐级递减，生产者所含能量最多。"
+  },
+  {
+    id: "u5c1-c05", t: "c", ct: "资料", d: 2, kp: "生态系统的自我调节",
+    title: "阅读资料，回答问题。",
+    m: "20世纪初，美国凯巴伯森林中生活着约4000只鹿，狼是鹿的主要天敌。为了保护鹿群，人们大量捕杀狼。此后，鹿的数量迅速增加，最多时超过了10万只。由于鹿群数量过多，森林中的灌木、幼树和草被大量啃食，植被遭到严重破坏，随后鹿因缺少食物而大量饿死，数量急剧下降。",
+    subs: [
+      { t: "s", q: "资料中鹿与狼之间的关系是", o: ["捕食", "竞争", "合作", "寄生"], a: 0, p: 2 },
+      { t: "s", q: "鹿的数量最终急剧下降，直接原因是", o: ["植被遭到破坏，食物严重缺乏", "狼的数量增加", "人们大量捕杀鹿", "气候突然变冷"], a: 0, p: 2 },
+      { t: "s", q: "这一事例说明", o: ["生态系统的自我调节能力是有一定限度的", "生态系统的自我调节能力是无限的", "狼对生态系统有害无益", "鹿越多越有利于森林"], a: 0, p: 2 },
+      { t: "o", q: "从这个事例中，你得到了什么启示？", a: "人类不能随意捕杀某种生物、破坏食物链，要尊重自然规律，维持生态平衡。", kw: ["不能/不要/不应", "生态平衡/自然规律/食物链"], p: 2 }
+    ],
+    e: "在生态系统中，各种生物通过食物链相互制约。捕杀狼使鹿失去天敌，超过了生态系统的自我调节限度，最终导致生态平衡被破坏。"
+  },
+  {
+    id: "u5c1-c06", t: "c", ct: "实验", d: 3, kp: "制作生态瓶",
+    title: "某小组用透明玻璃瓶制作了甲、乙、丙三个生态瓶，各瓶中加入等量的池塘水和泥沙，其他设置及结果如下表。三个瓶都密封，放在温度相同且适宜的环境中。",
+    m: "<table><tr><th>生态瓶</th><th>水草</th><th>小鱼</th><th>放置环境</th><th>小鱼存活时间</th></tr><tr><td>甲</td><td>有</td><td>2条</td><td>散射光下</td><td>25天</td></tr><tr><td>乙</td><td>无</td><td>2条</td><td>散射光下</td><td>4天</td></tr><tr><td>丙</td><td>有</td><td>2条</td><td>黑暗处</td><td>3天</td></tr></table>",
+    subs: [
+      { t: "s", q: "比较甲和乙，探究的问题是", o: ["水草对小鱼存活时间有影响吗？", "光照对小鱼存活时间有影响吗？", "泥沙对小鱼有影响吗？", "温度对小鱼有影响吗？"], a: 0, p: 2 },
+      { t: "s", q: "比较甲和丙，实验变量是", o: ["光照", "水草", "小鱼", "温度"], a: 0, p: 2 },
+      { t: "o", q: "甲瓶中小鱼存活时间最长，原因是什么？", a: "甲瓶中的水草在光下进行光合作用，释放氧气供小鱼呼吸；小鱼呼吸产生的二氧化碳又可供水草进行光合作用。", kw: ["光合作用", "氧气"], p: 2 },
+      { t: "s", q: "泥沙中的细菌和真菌在生态瓶中属于", o: ["分解者", "生产者", "消费者", "非生物部分"], a: 0, p: 2 },
+      { t: "s", q: "即使是甲瓶，小鱼最终也会死亡，主要原因是", o: ["生态瓶中生物种类少，自我调节能力弱", "生态瓶中没有分解者", "生态瓶中的能量可以循环利用", "小鱼不需要氧气"], a: 0, p: 2 }
+    ],
+    e: "丙瓶在黑暗中，水草不能进行光合作用，反而通过呼吸作用消耗氧气，小鱼死得最快。生态瓶是一个小型生态系统，生物种类少、营养结构简单，自我调节能力很弱。"
+  },
+  {
+    id: "u5c1-c07", t: "c", ct: "资料", d: 2, kp: "生态系统的类型",
+    title: "阅读资料，回答问题。",
+    m: "紫鹊界梯田位于娄底市新化县，已列入世界灌溉工程遗产名录。梯田依山而建，山上森林、竹林茂密，雨水被植被和土壤蓄积起来，再缓缓流入梯田，形成了独特的自流灌溉系统。农民在梯田中种植水稻，田中还生活着稻飞虱等害虫，以及捕食害虫的蜘蛛、青蛙等动物。",
+    subs: [
+      { t: "s", q: "梯田中的水稻属于生态系统中的", o: ["生产者", "消费者", "分解者", "非生物部分"], a: 0, p: 2 },
+      { t: "s", q: "山上的森林能为梯田持续提供灌溉用水，主要体现了森林的哪项作用", o: ["涵养水源、保持水土", "防风固沙", "调节气温", "提供木材"], a: 0, p: 2 },
+      { t: "s", q: "与山上的森林生态系统相比，梯田生态系统的自我调节能力较弱，原因是", o: ["生物种类少，营养结构简单", "面积太大", "阳光太充足", "水分太多"], a: 0, p: 2 },
+      { t: "o", q: "根据资料，写出梯田中的一条食物链。", a: "水稻→稻飞虱→蜘蛛（或水稻→稻飞虱→青蛙）", kw: ["水稻", "稻飞虱/害虫"], p: 2 }
+    ],
+    e: "森林能涵养水源、保持水土。农田生态系统以农作物为主，生物种类少，需要人的管理才能维持。书写食物链要从生产者开始，箭头指向捕食者。"
+  }
+]);
+
+/* ---- data/questions/u5c2.js ---- */
+/* 八上 第五单元 第二章 生态安全 */
+BANK.add("u5c2", [
+  /* —— 生态安全与人类活动 —— */
+  { id: "u5c2-001", t: "s", d: 1, kp: "生态安全", q: "生态安全是国家安全的重要组成部分。下列做法有利于维护生态安全的是", o: ["积极植树造林，保护湿地", "围湖造田，扩大耕地面积", "随意放生外来宠物", "大量使用农药和化肥"], a: 0, e: "植树造林、保护湿地能改善生态环境；围湖造田、随意放生外来物种、滥用农药化肥都会破坏生态环境。" },
+  { id: "u5c2-002", t: "s", d: 2, kp: "生态安全", q: "关于人与自然的关系，下列说法正确的是", o: ["人类是生物圈中的一员，应与自然和谐共生", "人类可以随意改造自然", "自然资源取之不尽、用之不竭", "人类活动对生物圈没有影响"], a: 0, e: "人类生活在生物圈中，依赖生物圈提供的资源和环境，应尊重自然、顺应自然、保护自然。" },
+  { id: "u5c2-003", t: "s", d: 2, kp: "人类活动对环境的影响", q: "形成酸雨的主要原因是大气中含有过多的", o: ["二氧化硫、氮氧化物等", "二氧化碳", "氧气", "氮气"], a: 0, e: "煤、石油等燃料燃烧时会排放二氧化硫和氮氧化物，它们与水结合形成酸性物质随雨水降落，形成酸雨。", tags: ["高频"] },
+  { id: "u5c2-004", t: "s", d: 2, kp: "人类活动对环境的影响", q: "下列**不属于**酸雨危害的是", o: ["使土壤中的营养物质增加", "使河流、湖泊酸化，影响鱼虾生长", "直接伤害植物的芽和叶", "腐蚀建筑物和金属制品"], a: 0, e: "酸雨会使土壤中的养分流失、土壤酸化，而不是使营养物质增加。", tags: ["易错"] },
+  { id: "u5c2-005", t: "s", d: 2, kp: "人类活动对环境的影响", q: "控制酸雨的根本措施是", o: ["减少煤、石油等燃料燃烧时污染物的排放", "向河流中撒石灰", "禁止使用塑料袋", "多建造高大建筑物"], a: 0, e: "酸雨主要来自燃料燃烧排放的污染物，通过使用脱硫技术、开发清洁能源等减少排放是根本措施。" },
+  { id: "u5c2-006", t: "s", d: 2, kp: "人类活动对环境的影响", q: "导致温室效应加剧、全球气候变暖的主要气体是", o: ["二氧化碳", "二氧化硫", "氧气", "氮气"], a: 0, e: "大量燃烧化石燃料、砍伐森林使大气中二氧化碳增多，温室效应加剧。", tags: ["高频"] },
+  { id: "u5c2-007", t: "s", d: 2, kp: "保护生态环境", q: "我国提出二氧化碳排放力争于2030年前达到峰值，努力争取2060年前实现", o: ["碳中和", "零排放", "碳循环", "无碳生活"], a: 0, e: "这就是“碳达峰、碳中和”目标。碳中和是指通过植树造林、节能减排等，抵消自身产生的二氧化碳排放。", tags: ["时事"] },
+  { id: "u5c2-008", t: "s", d: 2, kp: "保护生态环境", q: "下列做法与“低碳生活”理念**不相符**的是", o: ["经常使用一次性筷子和餐盒", "步行或骑自行车上学", "随手关灯，节约用电", "纸张双面使用"], a: 0, e: "一次性筷子和餐盒消耗大量木材和资源，不符合低碳生活理念。" },
+  { id: "u5c2-009", t: "s", d: 2, kp: "人类活动对环境的影响", q: "含氮、磷的生活污水和农田化肥大量流入湖泊，使藻类等大量繁殖，水质恶化。这种现象称为", o: ["水体富营养化", "酸雨", "温室效应", "生物富集"], a: 0, e: "氮、磷等营养物质过多使藻类疯长，发生在淡水中叫水华，发生在海洋中叫赤潮。" },
+  { id: "u5c2-010", t: "s", d: 3, kp: "人类活动对环境的影响", q: "水体富营养化后，水中鱼类常大量死亡，主要原因是", o: ["大量藻类死亡后被分解，消耗了水中大量的氧气", "藻类会捕食鱼类", "水中的二氧化碳减少", "鱼类的食物增多"], a: 0, e: "藻类大量繁殖后又大量死亡，细菌分解遗体时消耗大量氧气，导致水中缺氧，鱼类窒息死亡。" },
+  { id: "u5c2-011", t: "s", d: 1, kp: "人类活动对环境的影响", q: "“白色污染”是指", o: ["废弃塑料造成的污染", "白色粉尘造成的污染", "白色建筑造成的光污染", "石灰造成的污染"], a: 0, e: "废弃塑料难以降解，造成的环境污染称为白色污染。" },
+  { id: "u5c2-012", t: "s", d: 2, kp: "人类活动对环境的影响", q: "下列人类活动中，容易导致草原沙漠化的是", o: ["过度放牧", "合理轮牧", "种草固沙", "建立自然保护区"], a: 0, e: "过度放牧使草场植被被破坏，土地裸露，容易引起沙漠化。" },
+  { id: "u5c2-013", t: "s", d: 2, kp: "人类活动对环境的影响", q: "大量砍伐森林可能导致的后果中，**不包括**", o: ["空气中氧气含量明显增加", "水土流失加剧", "野生动物失去栖息地", "调节气候的能力下降"], a: 0, e: "森林能通过光合作用释放氧气，砍伐森林只会减少氧气的产生。", tags: ["易错"] },
+  { id: "u5c2-014", t: "s", d: 2, kp: "人类活动对环境的影响", q: "下列污染问题中，主要由氟利昂等物质引起的是", o: ["臭氧层被破坏", "酸雨", "温室效应", "水体富营养化"], a: 0, e: "氟利昂等会破坏臭氧层，使到达地面的紫外线增强，危害人体健康。" },
+  { id: "u5c2-015", t: "s", d: 2, kp: "人类活动对环境的影响", q: "某地农田长期大量使用杀虫剂，害虫天敌（如鸟类、青蛙）的数量明显减少。这说明", o: ["滥用农药会破坏生态平衡", "农药对生态系统没有影响", "农药只对害虫起作用", "应该继续加大农药用量"], a: 0, e: "农药会杀死害虫天敌，还会通过食物链积累，破坏生态平衡，因此要科学合理使用农药。" },
+
+  /* —— 生物入侵 —— */
+  { id: "u5c2-016", t: "s", d: 2, kp: "生物入侵", q: "外来物种入侵会威胁当地的生态安全，主要原因是", o: ["入侵物种在新环境中缺少天敌，大量繁殖，排挤本地物种", "入侵物种都有剧毒", "入侵物种能增加当地生物种类", "入侵物种无法在当地生存"], a: 0, e: "入侵物种在新环境中往往缺少天敌和竞争者，迅速繁殖蔓延，挤占本地物种的生存空间，破坏生态平衡。", tags: ["高频"] },
+  { id: "u5c2-017", t: "s", d: 1, kp: "生物入侵", q: "下列物种中，属于我国外来入侵物种的是", o: ["福寿螺", "大熊猫", "扬子鳄", "朱鹮"], a: 0, e: "福寿螺原产南美洲，被引入我国后成为入侵物种；大熊猫、扬子鳄、朱鹮都是我国特有的珍稀动物。" },
+  { id: "u5c2-018", t: "s", d: 2, kp: "生物入侵", q: "凤眼蓝（俗称“水葫芦”）引入我国后，在许多水域疯长，堵塞河道，导致水中其他生物大量死亡。这说明", o: ["盲目引进外来物种可能破坏生态平衡", "引进外来物种都能增加生物多样性", "凤眼蓝是我国的本地物种", "凤眼蓝对生态系统没有影响"], a: 0, e: "引进外来物种要慎重，否则可能造成生物入侵，威胁本地物种，破坏生态平衡。" },
+  { id: "u5c2-019", t: "s", d: 2, kp: "生物入侵", q: "小明想把家里养的红耳彩龟（巴西龟）放生到附近的河里，你认为", o: ["不应该，它可能成为入侵物种，威胁本地生物", "应该，放生是保护动物的行为", "应该，能增加河流中的生物种类", "无所谓，对环境没有影响"], a: 0, e: "红耳彩龟适应能力强，放生后可能与本地龟类争夺食物和空间，造成生物入侵。不能随意放生外来物种。", tags: ["情境"] },
+  { id: "u5c2-020", t: "s", d: 2, kp: "生物入侵", q: "为防止外来物种入侵，下列做法**错误**的是", o: ["从境外网购活体昆虫当宠物", "出入境时对动植物进行检疫", "不随意放生来历不明的动物", "发现疑似入侵物种及时报告"], a: 0, e: "私自从境外购买活体动植物可能带入入侵物种，违反《中华人民共和国生物安全法》等法律法规。" },
+  { id: "u5c2-021", t: "s", d: 2, kp: "生物入侵", q: "下列关于生物入侵的说法，正确的是", o: ["随意引进或放生外来物种可能导致生物入侵", "所有外来物种都会成为入侵物种", "生物入侵只会发生在海洋中", "生物入侵能使本地物种数量增加"], a: 0, e: "并非所有外来物种都会造成危害，但随意引进、放生可能导致生物入侵，造成本地物种减少。" },
+
+  /* —— 保护生态环境 —— */
+  { id: "u5c2-022", t: "s", d: 2, kp: "保护生态环境", q: "“绿水青山就是金山银山”蕴含的道理是", o: ["保护生态环境就是保护生产力", "经济发展比环境保护更重要", "为了保护环境要停止一切开发", "山水可以直接换成金银"], a: 0, e: "这一理念强调生态环境是宝贵的财富，保护生态环境就是保护生产力，改善生态环境就是发展生产力。" },
+  { id: "u5c2-023", t: "s", d: 2, kp: "保护生态环境", q: "从2021年1月1日起，长江流域重点水域实行“十年禁渔”，其主要目的是", o: ["保护长江水生生物资源，修复长江生态", "增加渔民的收入", "方便船只航行", "防止发生洪水"], a: 0, e: "长江禁渔是为了让长江休养生息，恢复鱼类等水生生物资源，保护长江江豚等珍稀物种。", tags: ["时事"] },
+  { id: "u5c2-024", t: "s", d: 2, kp: "保护生态环境", q: "我国实施退耕还林、还草、还湖等工程，主要目的是", o: ["恢复和保护生态环境", "增加粮食产量", "扩大城市面积", "开采地下矿产"], a: 0, e: "退耕还林、还草、还湖是为了恢复被破坏的森林、草原和湿地，保护生态环境。" },
+  { id: "u5c2-025", t: "s", d: 2, kp: "保护生态环境", q: "生活垃圾分类中，废旧荧光灯管、过期药品属于", o: ["有害垃圾", "可回收物", "厨余垃圾", "其他垃圾"], a: 0, e: "废旧荧光灯管含汞，过期药品含有有害成分，都属于有害垃圾，需要单独收集、专门处理。", tags: ["情境"] },
+  { id: "u5c2-026", t: "s", d: 1, kp: "保护生态环境", q: "下列垃圾中，属于可回收物的是", o: ["废旧报纸", "剩菜剩饭", "用过的餐巾纸", "过期药品"], a: 0, e: "废纸、塑料瓶、金属、玻璃等属于可回收物；剩菜剩饭是厨余垃圾；用过的餐巾纸是其他垃圾；过期药品是有害垃圾。" },
+  { id: "u5c2-027", t: "s", d: 1, kp: "保护生态环境", q: "下列做法中，有利于保护生态环境的是", o: ["工业废水处理达标后再排放", "将生活污水直接排入河流", "露天焚烧农作物秸秆", "大量使用一次性塑料袋"], a: 0, e: "工业废水达标排放可以减少水体污染；其余做法都会污染环境。" },
+  { id: "u5c2-028", t: "s", d: 2, kp: "保护生态环境", q: "城市污水处理厂常利用某些细菌净化污水，这主要是利用了细菌能够", o: ["分解污水中的有机物", "进行光合作用", "产生抗生素", "固定空气中的氮"], a: 0, e: "污水处理利用细菌把污水中的有机物分解成无机物，从而净化污水。" },
+  { id: "u5c2-029", t: "s", d: 2, kp: "保护生态环境", q: "下列关于保护生态环境的说法，正确的是", o: ["保护生态环境需要每个人从身边小事做起", "保护环境只是政府的事", "环境污染对人体健康没有影响", "应该先发展经济，以后再治理环境"], a: 0, e: "保护生态环境人人有责，应从节约资源、垃圾分类、绿色出行等小事做起。" },
+  { id: "u5c2-030", t: "s", d: 1, kp: "保护生态环境", q: "下列能源中，属于清洁能源的是", o: ["太阳能", "煤", "石油", "木柴"], a: 0, e: "太阳能、风能、水能等使用时几乎不产生污染物，属于清洁能源。" },
+  { id: "u5c2-031", t: "s", d: 2, kp: "保护生态环境", q: "某地在废弃矿区覆土、种草、植树，几年后矿区重新披上绿装。这一做法属于", o: ["生态修复", "生物入侵", "围湖造田", "毁林开荒"], a: 0, e: "通过人工措施帮助受损的生态系统恢复，属于生态修复。", tags: ["情境"] },
+  { id: "u5c2-032", t: "s", d: 2, kp: "保护生态环境", q: "洞庭湖是我国重要的湿地。下列做法中，有利于保护洞庭湖湿地生态系统的是", o: ["退田还湖，恢复湿地面积", "围湖造田，扩大耕地", "在湖区大量捕捞鱼类", "向湖中排放未经处理的污水"], a: 0, e: "退田还湖能恢复湿地面积，增强湿地蓄洪、净化水质的功能，保护湿地生物。", tags: ["情境"] },
+  { id: "u5c2-033", t: "s", d: 2, kp: "保护生态环境", q: "生物防治是利用生物来防治病虫害。下列属于生物防治的是", o: ["利用赤眼蜂防治玉米螟", "喷洒化学农药杀灭害虫", "用黑光灯诱杀害虫", "人工捕捉害虫"], a: 0, e: "利用天敌（赤眼蜂寄生在玉米螟卵中）控制害虫属于生物防治；黑光灯诱杀属于物理防治，喷农药属于化学防治。" },
+  { id: "u5c2-034", t: "s", d: 2, kp: "保护生态环境", q: "与使用化学农药相比，生物防治的优点是", o: ["减少农药使用，避免环境污染", "能在短时间内消灭所有害虫", "操作最简单，见效最快", "会使害虫天敌减少"], a: 0, e: "生物防治利用生物之间的关系控制害虫，不污染环境，有利于保持生态平衡。" },
+  { id: "u5c2-035", t: "s", d: 3, kp: "模拟酸雨实验", q: "在“探究酸雨对种子萌发的影响”实验中，用食醋和清水配制“模拟酸雨”浇灌实验组，对照组应浇灌", o: ["等量的清水", "等量的食醋", "不浇任何液体", "等量的盐水"], a: 0, e: "对照组与实验组只能有一个变量（是否为酸性溶液），所以对照组浇等量的清水。", tags: ["实验"] },
+
+  /* 判断题 */
+  { id: "u5c2-j01", t: "j", d: 1, kp: "人类活动对环境的影响", q: "酸雨主要是由大气中二氧化碳过多引起的。", a: false, e: "酸雨主要由二氧化硫、氮氧化物引起；二氧化碳过多会加剧温室效应。" },
+  { id: "u5c2-j02", t: "j", d: 1, kp: "生物入侵", q: "引进外来物种一定能增加当地的生物多样性。", a: false, e: "外来物种可能成为入侵物种，导致本地物种减少。" },
+  { id: "u5c2-j03", t: "j", d: 1, kp: "保护生态环境", q: "植树造林可以吸收二氧化碳，有利于缓解温室效应。", a: true, e: "植物通过光合作用吸收二氧化碳。" },
+  { id: "u5c2-j04", t: "j", d: 2, kp: "生物入侵", q: "把家里养的外来宠物放生到野外，是保护动物的行为。", a: false, e: "随意放生外来物种可能造成生物入侵。" },
+  { id: "u5c2-j05", t: "j", d: 1, kp: "保护生态环境", q: "保护生态环境，人人有责。", a: true, e: "要从身边小事做起。" },
+  { id: "u5c2-j06", t: "j", d: 2, kp: "人类活动对环境的影响", q: "废弃塑料难以降解，会造成“白色污染”。", a: true, e: "应减少使用一次性塑料制品。" },
+  { id: "u5c2-j07", t: "j", d: 2, kp: "人类活动对环境的影响", q: "生活污水中的氮、磷等物质越多，越有利于湖泊中鱼类的生长。", a: false, e: "会造成水体富营养化，导致鱼类缺氧死亡。" },
+  { id: "u5c2-j08", t: "j", d: 2, kp: "保护生态环境", q: "利用赤眼蜂防治玉米螟属于生物防治。", a: true, e: "利用天敌控制害虫。" },
+  { id: "u5c2-j09", t: "j", d: 1, kp: "保护生态环境", q: "过期药品属于可回收物。", a: false, e: "过期药品属于有害垃圾。" },
+  { id: "u5c2-j10", t: "j", d: 2, kp: "生态安全", q: "生态安全是国家安全的重要组成部分。", a: true, e: "维护生态安全关系到人类的生存和发展。" },
+  { id: "u5c2-j11", t: "j", d: 2, kp: "人类活动对环境的影响", q: "过度放牧会导致草原退化甚至沙漠化。", a: true, e: "要合理放牧。" },
+  { id: "u5c2-j12", t: "j", d: 2, kp: "保护生态环境", q: "为了发展经济，可以先污染环境，以后再治理。", a: false, e: "先污染后治理代价巨大，应坚持保护优先。" },
+
+  /* 非选择题 */
+  {
+    id: "u5c2-c01", t: "c", ct: "资料", d: 2, kp: "生物入侵",
+    title: "阅读资料，回答问题。",
+    m: "福寿螺原产于南美洲，20世纪80年代作为食用螺被引入我国。由于口感不佳、市场不好，一些养殖者将其丢弃到野外。福寿螺繁殖能力极强，在我国南方缺少天敌，迅速蔓延到稻田和河流中，大量啃食水稻幼苗和水生植物，它还是某些寄生虫的中间宿主，可能危害人体健康。福寿螺已被列入我国外来入侵物种名单。",
+    subs: [
+      { t: "s", q: "福寿螺能在我国南方迅速蔓延的主要原因是", o: ["缺少天敌，繁殖能力强", "气候寒冷", "被人们大量捕食", "食物缺乏"], a: 0, p: 2 },
+      { t: "s", q: "福寿螺啃食水稻幼苗，在生态系统中属于", o: ["消费者", "生产者", "分解者", "非生物部分"], a: 0, p: 2 },
+      { t: "s", q: "福寿螺入侵对当地生态系统的影响是", o: ["威胁本地物种，破坏生态平衡", "增加本地的生物多样性", "使生态系统更加稳定", "没有任何影响"], a: 0, p: 2 },
+      { t: "o", q: "为防止类似的外来物种入侵，请你提出一条建议。", a: "不随意引进外来物种；不随意丢弃、放生外来动物；加强出入境检疫；发现入侵物种及时清除等。", kw: ["引进/放生/丢弃/检疫/清除"], p: 2 }
+    ],
+    e: "外来物种进入新环境后，往往因缺少天敌而大量繁殖，挤占本地物种的生存空间，造成生物入侵。预防的关键是不随意引进和放生外来物种。"
+  },
+  {
+    id: "u5c2-c02", t: "c", ct: "实验", d: 2, kp: "模拟酸雨实验",
+    title: "为探究酸雨对种子萌发的影响，某小组用食醋和清水配制了不同pH的“模拟酸雨”（pH越小，酸性越强）。在4个培养皿中各放入100粒饱满的大豆种子，每天定时用等量的不同溶液浇灌，在适宜温度下培养7天，结果如下表。",
+    m: "<table><tr><th>浇灌的液体</th><th>清水（pH=7）</th><th>pH=5</th><th>pH=4</th><th>pH=3</th></tr><tr><td>种子萌发率</td><td>92%</td><td>75%</td><td>46%</td><td>12%</td></tr></table>",
+    subs: [
+      { t: "s", q: "该实验的变量是", o: ["模拟酸雨的酸性强弱（pH）", "种子的数量", "培养的温度", "浇灌的时间"], a: 0, p: 2 },
+      { t: "s", q: "用清水浇灌的一组，作用是", o: ["作对照", "增加种子数量", "为种子提供营养", "没有作用，可以去掉"], a: 0, p: 2 },
+      { t: "s", q: "每组用100粒种子而不是1粒，目的是", o: ["避免偶然性，使结果更可靠", "节约种子", "便于计算", "让种子相互帮助萌发"], a: 0, p: 2 },
+      { t: "o", q: "根据实验结果，你能得出什么结论？", a: "酸雨会抑制种子的萌发，酸性越强（pH越小），种子的萌发率越低。", kw: ["抑制/降低/不利", "越强/越小/越低"], p: 2 },
+      { t: "o", q: "为了减少酸雨，你在生活中可以怎么做？（写出一条即可）", a: "节约用电，绿色出行，减少煤、石油等燃料的燃烧，使用清洁能源等。", kw: ["节约/减少/清洁/绿色/公交/步行"], p: 2 }
+    ],
+    e: "设置清水组作对照，变量是溶液的酸性强弱。实验数据表明酸性越强，种子萌发率越低，说明酸雨会危害植物。减少化石燃料燃烧可以减少酸雨。"
+  },
+  {
+    id: "u5c2-c03", t: "c", ct: "资料", d: 2, kp: "保护生态环境",
+    title: "阅读资料，回答问题。",
+    m: "长江江豚是长江中特有的小型鲸类，被称为“水中大熊猫”，它用肺呼吸，胎生、哺乳，主要以鱼虾为食。过去由于过度捕捞、水质污染、航运繁忙等原因，长江江豚的数量一度急剧下降。2021年1月1日起，长江流域重点水域开始实行“十年禁渔”，洞庭湖等水域的鱼类资源和江豚数量逐步恢复。",
+    subs: [
+      { t: "s", q: "根据资料中的特征判断，长江江豚属于", o: ["哺乳动物", "鱼类", "两栖动物", "爬行动物"], a: 0, p: 2 },
+      { t: "s", q: "长江江豚以鱼虾为食，在生态系统中属于", o: ["消费者", "生产者", "分解者", "非生物部分"], a: 0, p: 2 },
+      { t: "s", q: "过度捕捞导致江豚数量下降，主要是因为", o: ["江豚的食物减少", "江豚的天敌增加", "江豚的繁殖能力增强", "江豚的栖息地扩大"], a: 0, p: 2 },
+      { t: "o", q: "请从食物链的角度，解释“十年禁渔”能使江豚数量逐步恢复的原因。", a: "禁渔后长江中的鱼虾数量增加，江豚的食物更加充足，所以江豚的数量逐步恢复。", kw: ["鱼/食物", "增加/充足/增多"], p: 2 }
+    ],
+    e: "江豚用肺呼吸、胎生哺乳，属于哺乳动物。生物通过食物链相互联系，禁渔使江豚的食物来源增加，有利于其数量恢复。"
+  },
+  {
+    id: "u5c2-c04", t: "c", ct: "综合", d: 1, kp: "保护生态环境",
+    title: "学校开展“践行生态文明，共建美丽家园”主题活动，请回答下列问题。",
+    subs: [
+      { t: "s", q: "垃圾分类时，下列属于厨余垃圾的是", o: ["果皮、菜叶", "废旧报纸", "塑料瓶", "废旧荧光灯管"], a: 0, p: 2 },
+      { t: "s", q: "下列做法中，最能体现“从源头减少垃圾”的是", o: ["自带水杯，少用一次性纸杯", "把垃圾集中焚烧", "把垃圾运到郊外填埋", "把垃圾倒入河中"], a: 0, p: 2 },
+      { t: "o", q: "请你为保护家乡娄底的生态环境提出一条合理建议。", a: "如：节约用水用电，做好垃圾分类，绿色出行，植树种草，不随意放生外来物种，不向河流排放污水等。", kw: ["节约/垃圾/绿色/植树/放生/污水/保护"], p: 2 }
+    ],
+    e: "生态文明建设需要人人参与。减少垃圾产生、做好垃圾分类、节约资源、绿色出行都是保护环境的具体行动。"
   }
 ]);
 

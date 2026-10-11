@@ -53,6 +53,19 @@ const FK = {
     return `<g class="bx ${cls || ""}"><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="6"/>` +
       `<text class="bt" x="${x + w / 2}" y="${y + h / 2 + 4.5}" text-anchor="middle">${s}</text></g>`;
   },
+  /* 以中心点定位的文字方框：r = {x, y, w, h} */
+  cbox(r, s, cls) {
+    return FK.box(r.x - r.w / 2, r.y - r.h / 2, r.w, r.h, s, cls);
+  },
+  /* 两个方框之间的箭头，起止点自动落在方框边缘 */
+  link(a, b, cls, gap) {
+    gap = gap == null ? 3 : gap;
+    const dx = b.x - a.x, dy = b.y - a.y, L = Math.hypot(dx, dy) || 1;
+    const ux = dx / L, uy = dy / L;
+    const t = r => Math.min(r.w / 2 / (Math.abs(ux) || 1e-9), r.h / 2 / (Math.abs(uy) || 1e-9)) + gap;
+    const ta = t(a), tb = t(b);
+    return FK.arr(+(a.x + ux * ta).toFixed(1), +(a.y + uy * ta).toFixed(1), +(b.x - ux * tb).toFixed(1), +(b.y - uy * tb).toFixed(1), cls);
+  },
   /* 坐标轴（曲线图用）：返回轴线与刻度；fx/fy 为数据到坐标的映射 */
   axes(o) {
     const { x0, y0, w, h, xt, yt, xl, yl } = o;

@@ -208,7 +208,7 @@ const BANK = {
         const optsA = [L.name].concat(others.slice(0, 12).map(x => x.name));
         const qa = Object.assign({}, base, {
           id: `F:${f.id}:${L.n}:a`, t: "s",
-          q: `识图：图中${circ(L.n)}所示的结构名称是`,
+          q: "识图：" + (f.dq || "图中{n}所示的结构名称是").replace("{n}", circ(L.n)),
           o: uniq(optsA), a: 0, pool: true,
           e: `${circ(L.n)}是${L.name}${L.fn ? "，" + L.fn : ""}。`
         });
@@ -217,10 +217,10 @@ const BANK = {
           const withFn = others.filter(x => x.fn !== L.fn);
           const qb = Object.assign({}, base, {
             id: `F:${f.id}:${L.n}:b`, t: "s", d: 2,
-            q: `识图：图中具有“${L.fn}”作用的结构是`,
+            q: `识图：图中符合“${L.fn}”这一描述的是`,
             o: [`${circ(L.n)} ${L.name}`].concat(withFn.map(x => `${circ(x.n)} ${x.name}`)),
             a: 0, pool: true,
-            e: `${L.fn}的是${circ(L.n)}${L.name}。`
+            e: `${circ(L.n)}${L.name}：${L.fn}。`
           });
           this._addDrill(qb);
         }

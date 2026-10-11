@@ -54,7 +54,7 @@
   a += co(1, 140, 100, 70, 120, "肺泡", "l");
   a += co(2, 290, 84, 330, 120, "毛细血管", "r");
   a += co(3, 92, 42, 150, 24, "细支气管", "r");
-  BANK.fig("alveolus", {
+  BANK.fig("alveolus", { drill: false,
     title: "肺泡与毛细血管之间的气体交换示意图", vb: "0 0 420 256", ch: "u4c3", kp: "肺内的气体交换",
     body: a,
     labels: [
