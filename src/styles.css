@@ -528,7 +528,8 @@ textarea { resize: vertical; line-height: 1.6; }
 .notes { color: var(--ink-2); font-size: 0.92rem; }
 .traps { background: var(--surface-2); border-radius: var(--r-sm); padding: 0.75rem 0.9rem; }
 .traps h3 { color: var(--bad); }
-.hbt th[scope="row"] { font-weight: 600; white-space: nowrap; }
+.hbt th[scope="row"] { font-weight: 600; min-width: 4.5em; max-width: 11em; }
+.hbt td { min-width: 5.5em; }
 .hbt td, .hbt th { font-size: 0.88rem; }
 .pager { display: flex; justify-content: space-between; gap: 1rem; font-size: 0.92rem; }
 .hb-tools { justify-content: flex-start; }
@@ -657,11 +658,21 @@ body.show-key .paper.key { display: block; }
   body.print-a .paper:not(.key) { display: none; }
   body.print-a .paper.key { display: block; }
   body.print-q .paper.key { display: none; }
-  .hbook { border: 0; padding: 0; break-after: page; gap: 0.5rem; font-size: 10.5pt; }
-  .hb-all .hbook:last-child { break-after: auto; }
-  .hb-sec { break-inside: avoid; }
+  .hbook { border: 0; padding: 0; gap: 0.45rem; font-size: 10.5pt; line-height: 1.55; }
+  .hb-all .hbook + .hbook { margin-top: 1.1rem; }
+  .hb-book + .hb-book { break-before: page; }
+  .hb-cover { display: block; padding: 0 0 0.8rem; margin-bottom: 0.8rem; border-bottom: 3px double #111; }
+  .hb-cover h1 { font-size: 20pt; margin: 0; }
+  .hb-cover p { margin: 0.2rem 0 0; color: #333; }
+  .hbook, .hb-sec { display: block; }
+  .hbook > * + * { margin-top: 0.55rem; }
+  .hb-sec > * + * { margin-top: 0.3rem; }
+  .hb-sec h3, .hb-h { break-after: avoid; }
+  .hbt th, .hbt td { padding: 0.22rem 0.45rem; }
+  .hb-sec li, .tbl tr, .hb-tip { break-inside: avoid; }
+  .hb-sec ul, .hb-sec ol { gap: 0.12rem; }
   .fig { break-inside: avoid; }
-  .fig .figsvg { max-width: 300px !important; }
+  .fig .figsvg { max-width: 330px !important; }
   .fig figcaption button { display: none; }
   a { color: inherit; }
 }

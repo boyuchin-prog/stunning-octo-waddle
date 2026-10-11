@@ -81,6 +81,19 @@ for (const [ch, d] of Object.entries(BANK.hb)) {
   if (!BANK.chMap[ch]) errs.push(`手册章节 ${ch} 无效`);
   for (const s of d.secs || []) if (s.fig && !BANK.figs[s.fig]) errs.push(`手册 ${ch} 引用的图 ${s.fig} 不存在`);
 }
+/* 速查手册 */
+for (const [chId, d] of Object.entries(BANK.hb)) {
+  const H = m => errs.push(`手册 ${chId}: ${m}`);
+  if (!BANK.chMap[chId]) H("章节无效");
+  (d.secs || []).forEach((s, i) => {
+    if (!s.h) H(`第${i + 1}节缺少标题`);
+    if (s.fig && !BANK.figs[s.fig]) H(`图 ${s.fig} 不存在`);
+    if (!s.pts || !s.pts.length) H(`“${s.h}”没有要点`);
+  });
+  (d.tables || []).forEach(t => t.rows.forEach((r, i) => { if (r.length !== t.head.length) H(`表“${t.h}”第${i + 1}行列数不对`); }));
+  (d.exps || []).forEach(e => { if (!e.steps || !e.steps.length) H(`实验“${e.h}”没有步骤`); });
+}
+for (const t of BANK.tips) if (!t.h || !t.body) errs.push("考前必看有空条目");
 /* 图的标注 */
 for (const f of BANK.figList) {
   if (f.ch && !BANK.chMap[f.ch]) errs.push(`图 ${f.id} 的章节无效`);

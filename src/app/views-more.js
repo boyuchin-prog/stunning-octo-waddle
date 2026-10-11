@@ -64,12 +64,15 @@ function viewTips() {
   let h = `<nav class="crumb no-print"><a href="#hb">开卷速查手册</a><span>›</span>考前必看</nav>`;
   h += pageHead("考前必看", "开卷考试拼的是理解、速度和答题规范。下面这些方法在每次模考里都用得上。",
     UI.canPrint() ? `<button type="button" class="btn no-print" data-act="printPage">${icon("print")}打印</button>` : "");
-  h += `<div class="print-area"><article class="hbook">`;
-  for (const t of BANK.tips) {
-    h += `<section class="hb-sec"><h3>${fmt(t.h, true)}</h3>${t.body}</section>`;
-  }
-  h += `</article></div>`;
+  h += `<div class="print-area">${tipsHtml(false)}</div>`;
   return { html: h, title: "考前必看" };
+}
+
+function tipsHtml(withHead) {
+  let h = `<article class="hbook">`;
+  if (withHead) h += `<header class="hb-h"><p class="eyebrow">开卷答题策略与答题模板</p><h2>考前必看</h2></header>`;
+  for (const t of BANK.tips) h += `<section class="hb-sec"><h3>${fmt(t.h, true)}</h3>${t.body}</section>`;
+  return h + `</article>`;
 }
 
 /* ---------- 老师组卷 ---------- */

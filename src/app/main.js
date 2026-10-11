@@ -355,8 +355,13 @@ const ACT = {
   printHb(el) {
     const ch = el.dataset.ch;
     if (ch === "all") {
-      const html = BANK.chapters.filter(c => BANK.hb[c.id]).map(c => hbChapterHtml(c.id, true)).join("");
-      doPrint(`<div class="print-area hb-all">${html}</div>`);
+      // 按册分组：每册从新的一页开始，册内各章连续排版以节省纸张
+      const html = BANK.books.map(b => {
+        const inner = BANK.chapters.filter(c => c.book === b.id && BANK.hb[c.id]).map(c => hbChapterHtml(c.id, true)).join("");
+        return inner ? `<section class="hb-book">${inner}</section>` : "";
+      }).join("");
+      const cover = `<header class="hb-cover"><h1>开卷速查手册</h1><p>八年级生物学会考 · 人教版（2024）新教材 · 生物会考冲A</p></header>`;
+      doPrint(`<div class="print-area hb-all">${cover}<section class="hb-book">${tipsHtml(true)}</section>${html}</div>`);
     } else window.print();
   },
   printPage() { window.print(); },
