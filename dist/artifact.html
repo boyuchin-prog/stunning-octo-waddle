@@ -3511,7 +3511,7 @@ BANK.add("u2c2", [
       { t: "s", q: "蝗虫的身体分为③④⑤三部分，它们依次是", o: ["头部、胸部、腹部", "头部、腹部、胸部", "胸部、头部、腹部", "头胸部、腹部、尾部"], a: 0, p: 2 },
       { t: "f", q: "蝗虫的运动中心是____（填序号），它上面着生三对足和两对翅。", a: ["④", "4", "④胸部", "胸部"], p: 2 },
       { t: "s", q: "图中⑧是气体进出蝗虫身体的门户，它的名称是", o: ["气门", "气管", "鳃", "肺"], a: 0, p: 2 },
-      { t: "s", q: "蝗虫体表有坚韧的外骨骼，下列不是外骨骼作用的是", o: ["随身体生长而长大", "保护内部器官", "支持身体", "防止水分蒸发"], a: 0, p: 2 },
+      { t: "s", q: "蝗虫体表有坚韧的外骨骼，下列**不是**外骨骼作用的是", o: ["随身体生长而长大", "保护内部器官", "支持身体", "防止水分蒸发"], a: 0, p: 2 },
       { t: "s", q: "蝗虫属于节肢动物中的昆虫，下列动物与它同属昆虫的是", o: ["蝴蝶", "蜘蛛", "螃蟹", "蜈蚣"], a: 0, p: 2 }
     ],
     e: "昆虫的特征：身体分头、胸、腹三部分；一般有两对翅、三对足；有一对触角；体表有外骨骼。气门在胸部和腹部，气体交换在气管中进行。"
@@ -3698,7 +3698,7 @@ BANK.add("u2c4", [
   { id: "u2c4-018", t: "s", d: 2, kp: "尝试对生物进行分类", q: "在学习过的动物中，与人类亲缘关系最近的是", o: ["黑猩猩", "家兔", "家鸽", "青蛙"], a: 0, e: "黑猩猩与人同属灵长目人科，亲缘关系最近。" },
   { id: "u2c4-019", t: "s", d: 2, kp: "分类单位", q: "一个“目”中所包含的生物，与一个“属”中所包含的生物相比", o: ["种类多，共同特征少", "种类少，共同特征多", "种类多，共同特征多", "种类少，共同特征少"], a: 0, e: "目比属大，包含的生物种类多，共同特征少。" },
   { id: "u2c4-020", t: "s", d: 2, kp: "双名法", q: "下列关于双名法的叙述，**错误**的是", o: ["学名用中文书写，便于全世界通用", "学名的第一部分是属名", "学名的第二部分是种加词", "每种生物只有一个学名"], a: 0, e: "学名用拉丁文表示，全世界通用，避免了同物异名或同名异物造成的混乱。" },
-  { id: "u2c4-021", t: "s", d: 3, kp: "尝试对生物进行分类", q: "下列动物中，与其他三种不属于同一类群的是", o: ["蜘蛛", "蝴蝶", "蜜蜂", "蝗虫"], a: 0, e: "蝴蝶、蜜蜂、蝗虫都是昆虫（三对足、一般有两对翅）；蜘蛛有四对足、无翅，不是昆虫。" },
+  { id: "u2c4-021", t: "s", d: 3, kp: "尝试对生物进行分类", q: "下列动物中，与其他三种**不属于**同一类群的是", o: ["蜘蛛", "蝴蝶", "蜜蜂", "蝗虫"], a: 0, e: "蝴蝶、蜜蜂、蝗虫都是昆虫（三对足、一般有两对翅）；蜘蛛有四对足、无翅，不是昆虫。" },
   { id: "u2c4-022", t: "s", d: 2, kp: "尝试对生物进行分类", q: "将植物分为孢子植物和种子植物，将种子植物分为裸子植物和被子植物，后者的分类依据是", o: ["种子外有无果皮包被", "是否有种子", "是否有输导组织", "是否能进行光合作用"], a: 0, e: "裸子植物种子裸露，被子植物种子外有果皮包被。" },
 
   /* 判断题 */
@@ -8177,29 +8177,40 @@ const Exam = {
     return out.slice(0, n);
   },
 
-  /* 非选择题凑满目标分值，尽量覆盖 识图/实验/资料 三类 */
+  /* 非选择题凑满目标分值：尽量覆盖 识图/实验/资料 三类；每册至少一道、同一章不出两道 */
   pickCases(chIds, target, rand, opts) {
     opts = opts || {};
     const pool = this.casePool(chIds);
     if (!pool.length || target <= 0) return [];
     const minN = opts.minN || 1, maxN = opts.maxN || 99;
+    const bookOf = q => BANK.chMap[q.ch].book;
+    const nBooks = uniq(pool.map(bookOf)).length;
+    const bookCap = Math.max(2, Math.ceil(Math.min(maxN, pool.length) / nBooks));
     let best = null, bestGap = Infinity;
-    for (let attempt = 0; attempt < 400; attempt++) {
+    for (let attempt = 0; attempt < 600; attempt++) {
+      const strict = attempt < 450;   // 先按“每章一道、每册限量”找，找不到再放宽
       const sh = shuffle(pool.map(q => ({ q, s: rand() + this.freshness(q) * 0.6 })).sort((a, b) => b.s - a.s).map(x => x.q), rand);
-      const picked = [], seenCt = new Set();
+      const picked = [], chUsed = {}, bookUsed = {};
       let tot = 0;
+      const ok = q => !picked.includes(q) && tot + q.p <= target &&
+        (!strict || (!chUsed[q.ch] && (bookUsed[bookOf(q)] || 0) < bookCap));
+      const add = q => { picked.push(q); tot += q.p; chUsed[q.ch] = 1; bookUsed[bookOf(q)] = (bookUsed[bookOf(q)] || 0) + 1; };
       for (const ct of ["识图", "实验", "资料"]) {
-        const c = sh.find(q => q.ct === ct && !picked.includes(q) && tot + q.p <= target);
-        if (c) { picked.push(c); seenCt.add(ct); tot += c.p; }
+        const c = sh.find(q => q.ct === ct && ok(q));
+        if (c) add(c);
+      }
+      if (strict) for (const b of shuffle(uniq(pool.map(bookOf)), rand)) {
+        if (bookUsed[b] || picked.length >= maxN) continue;
+        const c = sh.find(q => bookOf(q) === b && ok(q));
+        if (c) add(c);
       }
       for (const q of sh) {
         if (tot >= target || picked.length >= maxN) break;
-        if (picked.includes(q)) continue;
-        if (tot + q.p <= target) { picked.push(q); tot += q.p; }
+        if (ok(q)) add(q);
       }
       const gap = target - tot;
       if (gap === 0 && picked.length >= minN && picked.length <= maxN) { best = picked; break; }
-      if (gap >= 0 && gap < bestGap) { bestGap = gap; best = picked; }
+      if (gap >= 0 && gap < bestGap && picked.length <= maxN) { bestGap = gap; best = picked; }
     }
     return best || [];
   },
@@ -8528,7 +8539,7 @@ function viewHome() {
   </div>`;
 
   h += `<section class="note">
-    <p><b>2026年起湖南生物学会考改为开卷</b>：60分钟，满分100分，单项选择题25题×2分，非选择题5~7题共50分。娄底按原始分划等第：A≥80，B 70~79，C 60~69，D&lt;60（另有按区域排名划分，取较高等第）。示范性高中一般要求生物、地理都达到B等及以上。</p>
+    <p><b>2026年起湖南生物学会考改为开卷</b>：60分钟，满分100分，单项选择题25题×2分，非选择题5~7题共50分。娄底按原始分划等第：A≥80，B 70~79，C 60~69，D&lt;60（另有按区域排名划分，取较高等第）。示范性高中一般要求生物、地理都达到B等及以上。以上为近年娄底的做法，<b>具体以当年省、市正式文件为准</b>。</p>
     <p class="muted">题库共 ${s.all} 题（单选 ${s.s}、判断 ${s.j}、非选择题 ${s.c}，另含识图训练 ${s.auto} 题、示意图 ${s.fig} 幅），均为依据2022年版课程标准与人教版2024新教材原创编写。<a href="#about">说明与依据</a></p>
   </section>`;
   return { html: h, title: "首页" };
@@ -9292,7 +9303,7 @@ function viewAbout() {
   h += `<section class="panel prose">
     <h3>内容依据</h3>
     <ul>
-      <li>知识范围：《义务教育生物学课程标准（2022年版）》与人教版《义务教育教科书·生物学》七年级上册至八年级下册（2024年版新教材）。章节名称按新教材编排，新教材已删去的“动物的运动和行为”“生物技术”等内容不再出题。</li>
+      <li>知识范围：《义务教育生物学课程标准（2022年版）》与人教版《义务教育教科书·生物学》七年级上册至八年级下册（2024年版新教材）。章节名称按新教材编排。新教材不再单独设章的“动物的行为”“生物技术”不出专门题目；运动系统按新教材并入八上第六章，转基因只在“基因控制性状”和育种中涉及。</li>
       <li>试卷结构：湖南省教育考试院《湖南省初中学业水平考试试卷结构（2025年修订）》，2026年起生物学为开卷笔试，60分钟，满分100分；单项选择题25题共50分，非选择题5~7题共50分。</li>
       <li>等第划分：娄底市2025年发布的中考中招政策调整事项。生物学、地理为考查科目，卷面100分，按A/B/C/D等第作为普通高中录取的入围依据。</li>
     </ul>

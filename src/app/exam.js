@@ -88,29 +88,40 @@ const Exam = {
     return out.slice(0, n);
   },
 
-  /* 非选择题凑满目标分值，尽量覆盖 识图/实验/资料 三类 */
+  /* 非选择题凑满目标分值：尽量覆盖 识图/实验/资料 三类；每册至少一道、同一章不出两道 */
   pickCases(chIds, target, rand, opts) {
     opts = opts || {};
     const pool = this.casePool(chIds);
     if (!pool.length || target <= 0) return [];
     const minN = opts.minN || 1, maxN = opts.maxN || 99;
+    const bookOf = q => BANK.chMap[q.ch].book;
+    const nBooks = uniq(pool.map(bookOf)).length;
+    const bookCap = Math.max(2, Math.ceil(Math.min(maxN, pool.length) / nBooks));
     let best = null, bestGap = Infinity;
-    for (let attempt = 0; attempt < 400; attempt++) {
+    for (let attempt = 0; attempt < 600; attempt++) {
+      const strict = attempt < 450;   // 先按“每章一道、每册限量”找，找不到再放宽
       const sh = shuffle(pool.map(q => ({ q, s: rand() + this.freshness(q) * 0.6 })).sort((a, b) => b.s - a.s).map(x => x.q), rand);
-      const picked = [], seenCt = new Set();
+      const picked = [], chUsed = {}, bookUsed = {};
       let tot = 0;
+      const ok = q => !picked.includes(q) && tot + q.p <= target &&
+        (!strict || (!chUsed[q.ch] && (bookUsed[bookOf(q)] || 0) < bookCap));
+      const add = q => { picked.push(q); tot += q.p; chUsed[q.ch] = 1; bookUsed[bookOf(q)] = (bookUsed[bookOf(q)] || 0) + 1; };
       for (const ct of ["识图", "实验", "资料"]) {
-        const c = sh.find(q => q.ct === ct && !picked.includes(q) && tot + q.p <= target);
-        if (c) { picked.push(c); seenCt.add(ct); tot += c.p; }
+        const c = sh.find(q => q.ct === ct && ok(q));
+        if (c) add(c);
+      }
+      if (strict) for (const b of shuffle(uniq(pool.map(bookOf)), rand)) {
+        if (bookUsed[b] || picked.length >= maxN) continue;
+        const c = sh.find(q => bookOf(q) === b && ok(q));
+        if (c) add(c);
       }
       for (const q of sh) {
         if (tot >= target || picked.length >= maxN) break;
-        if (picked.includes(q)) continue;
-        if (tot + q.p <= target) { picked.push(q); tot += q.p; }
+        if (ok(q)) add(q);
       }
       const gap = target - tot;
       if (gap === 0 && picked.length >= minN && picked.length <= maxN) { best = picked; break; }
-      if (gap >= 0 && gap < bestGap) { bestGap = gap; best = picked; }
+      if (gap >= 0 && gap < bestGap && picked.length <= maxN) { bestGap = gap; best = picked; }
     }
     return best || [];
   },
